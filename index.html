@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>最大卡片猜想王 v4.0 (硬核博弈浅色版)</title>
+    <style>
+        :root {
+            --bg-main: #f4f6f9;
+            --bg-container: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --success-hover: #059669;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            
+            --card-back-grad: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            --card-front-bg: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            transition: background-color 0.3s;
+        }
+
+        .container {
+            max-width: 840px;
+            width: 100%;
+            background: var(--bg-container);
+            padding: 35px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 16px -6px rgba(0, 0, 0, 0.05), 0 0 1px 1px rgba(0,0,0,0.02);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--text-main);
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-top: 0;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        h1 small {
+            font-size: 0.55em;
+            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin-left: 5px;
+            vertical-align: middle;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        /* 配置区域优化 */
+        .settings {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid #e2e8f0;
+        }
+
+        .setting-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .setting-item input {
+            width: 75px;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: var(--text-main);
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .setting-item input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 131, 246, 0.15);
+        }
+
+        /* 记分板优化 */
+        .scoreboard {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 24px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            background: #f1f5f9;
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .score-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .high-score { color: #b45309; }
+
+        /* 操作区域优化 */
+        .action-zone {
+            text-align: center;
+            margin-bottom: 30px;
+            background: #fffbeb;
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px dashed #fcd34d;
+        }
+
+        .msg {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 16px;
+            min-height: 24px;
+            line-height: 1.5;
+            color: #d97706;
+            transition: color 0.2s;
+        }
+
+        /* 按钮统一样式 */
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: white; 
+        }
+        .btn-primary:hover { 
+            background-color: var(--primary-hover); 
+            box-shadow: 0 4px 12px rgba(59, 131, 246, 0.2);
+        }
+        
+        .btn-success { 
+            background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); 
+            color: white; 
+            font-size: 1.05rem; 
+            padding: 14px 28px; 
+            width: 100%; 
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
+        }
+        .btn-success:hover { 
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); 
+            box-shadow: 0 6px 20px rgba(234, 88, 12, 0.3);
+        }
+        .btn-success:disabled { 
+            background: #cbd5e1 !important; 
+            color: #94a3b8; 
+            cursor: not-allowed; 
+            box-shadow: none !important;
+            transform: none !important;
+        }
+
+        /* 卡片容器与扑克牌优化 */
+        .cards-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+
+        .card {
+            width: 80px;
+            height: 115px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-radius: 12px;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            border-radius: 12px;
+            box-sizing: border-box;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        /* 卡片背面设计（高级科技感纹理蓝） */
+        .card-back {
+            background: var(--card-back-grad);
+            color: #ffffff;
+        }
+        
+        .card-back span {
+            font-size: 1.8rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .card-back .tip { 
+            font-size: 0.65rem; 
+            color: rgba(255, 255, 255, 0.7); 
+            margin-top: 6px; 
+            font-weight: 400;
+        }
+
+        /* 卡片正面设计 */
+        .card-front {
+            background-color: var(--card-front-bg);
+            color: var(--text-main);
+            font-size: 1.6rem;
+            transform: rotateY(180deg);
+        }
+
+        /* 选中状态高亮 */
+        .card.selected:not(.flipped) .card-inner {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px rgba(234, 88, 12, 0.25);
+        }
+        .card.selected:not(.flipped) .card-back { 
+            border: 3px solid #ea580c; 
+        }
+        
+        .card.flipped.selected .card-front { 
+            border: 3px solid #f59e0b; 
+            background-color: #fef3c7; 
+        }
+        
+        /* 游戏结果结算高亮效果（重磅视觉） */
+        /* 真正的大赢家牌：翡翠绿渐变发光 */
+        .card.is-max .card-front { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; 
+            color: #ffffff !important; 
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.6) !important;
+            border: none;
+        }
+        /* 炸弹牌：烈焰红渐变发光 */
+        .card.is-bomb .card-front { 
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important; 
+            color: #ffffff !important; 
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4) !important;
+            border: none;
+        }
+        /* 被干掉的牌：优雅的灰色被禁状态 */
+        .card.is-killed .card-front { 
+            background-color: #e2e8f0 !important; 
+            color: #94a3b8 !important; 
+            text-decoration: line-through; 
+            box-shadow: none !important;
+            border: 1px dashed #cbd5e1;
+        }
+
+        @media (max-width: 640px) {
+            .settings { flex-direction: column; align-items: stretch; }
+            .setting-group { flex-direction: column; }
+            .setting-item { justify-content: space-between; }
+            .btn-primary { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>最大卡片猜想王 🧠 <small>v4.0 绝境博弈版</small></h1>
+    <div class="subtitle">⚠️ 警告：包含【致命炸弹牌】与【迷雾随机上限】。盲猜暗牌失败将倒扣最高分！</div>
+
+    <div class="settings">
+        <div class="setting-group">
+            <div class="setting-item">
+                <label>预计基准范围: 1 至 </label>
+                <input type="number" id="maxNumInput" value="100">
+                <span style="color: var(--text-muted); font-size: 0.8rem;">(实际最大值含 ±15% 迷雾扰动)</span>
+            </div>
+            <div class="setting-item">
+                <label>抽取卡片数:</label>
+                <input type="number" id="cardCount" value="10" min="4">
+            </div>
+        </div>
+        <button class="btn-primary" onclick="initGame()">生成深渊对局</button>
+    </div>
+
+    <div class="scoreboard">
+        <div class="score-box">潜在结算得分: <span id="potentialScore" style="color: #e67e22;">0</span></div>
+        <div class="score-box high-score">🌟 历史最高分: <span id="highScore">0</span></div>
+    </div>
+
+    <div class="action-zone">
+        <div id="gameMsg" class="msg">请生成新对局...</div>
+        <button id="gambleBtn" class="btn-success" onclick="declareMax()" disabled>🔥 锁定选中目标：断言它是有效最大值！</button>
+    </div>
+
+    <div id="cardsContainer" class="cards-container"></div>
+</div>
+
+<script>
+    let cardsData = [];       
+    let flippedCount = 0;     
+    let selectedIndex = -1;   
+    let isGameOver = false;
+    let bombIndex = -1;       // 炸弹牌的索引
+    let actualMaxVal = -1;    // 经判定的最终有效最大值
+    let highScore = parseInt(localStorage.getItem('maxCardHighScoreV4')) || 0;
+
+    document.getElementById('highScore').innerText = highScore;
+
+    function initGame() {
+        const baseMax = parseInt(document.getElementById('maxNumInput').value);
+        const count = parseInt(document.getElementById('cardCount').value);
+
+        if (isNaN(baseMax) || isNaN(count) || count < 4) {
+            alert("卡片数不能少于4张！");
+            return;
+        }
+
+        // 机制1：数字迷雾
+        const fuzz = Math.floor((Math.random() * 2 - 1) * (baseMax * 0.15)); 
+        const currentMaxRange = baseMax + fuzz;
+
+        // 生成不重复池
+        const pool = [];
+        for (let i = 1; i <= currentMaxRange; i++) pool.push(i);
+        
+        // 洗牌抽取
+        cardsData = [];
+        for (let i = 0; i < count; i++) {
+            if(pool.length === 0) break;
+            const randomIndex = Math.floor(Math.random() * pool.length);
+            cardsData.push(pool.splice(randomIndex, 1)[0]);
+        }
+
+        // 机制2：致命炸弹牌
+        bombIndex = Math.floor(Math.random() * cardsData.length);
+        cardsData[bombIndex] = 0; 
+
+        // 核心逻辑计算：找出有效最大值
+        let tempMax = -1;
+        cardsData.forEach((num) => {
+            if (num > tempMax) tempMax = num;
+        });
+
+        // 判定炸弹相邻吞噬
+        let finalMax = tempMax;
+        const rawMaxIndex = cardsData.indexOf(tempMax);
+        if (Math.abs(rawMaxIndex - bombIndex) === 1) {
+            finalMax = -1;
+            cardsData.forEach((num, idx) => {
+                if (num > finalMax && num !== tempMax) finalMax = num;
+            });
+            actualMaxVal = finalMax; 
+            actualMaxVal.isKilled = tempMax; 
+        } else {
+            actualMaxVal = finalMax;
+        }
+
+        // 重置状态
+        flippedCount = 0;
+        selectedIndex = -1;
+        isGameOver = false;
+        document.getElementById('gambleBtn').disabled = true;
+        
+        const msgBox = document.getElementById('gameMsg');
+        msgBox.innerText = "🔮 暗黑规则：双击牌面翻开。小心！若本局最大值与【0号炸弹牌】左右相邻，最大值将失效，由次大值接替！";
+        msgBox.style.color = "#d97706";
+        updatePotentialScore();
+
+        const container = document.getElementById('cardsContainer');
+        container.innerHTML = '';
+        
+        cardsData.forEach((num, index) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.id = `card-${index}`;
+            
+            card.onclick = () => { if(!isGameOver) selectCard(index); };
+            card.ondblclick = () => { if(!isGameOver) flipCard(index); };
+
+            card.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-back">
+                        <span>?</span>
+                        <div class="tip">双击翻开</div>
+                    </div>
+                    <div class="card-front">${num === 0 ? '💣' : num}</div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    </div>
+
+    function flipCard(index) {
+        const cardElement = document.getElementById(`card-${index}`);
+        if (cardElement.classList.contains('flipped')) return;
+
+        cardElement.classList.add('flipped');
+        flippedCount++;
+        updatePotentialScore();
+        selectCard(index);
+
+        if (cardsData[index] === 0) {
+            const msgBox = document.getElementById('gameMsg');
+            msgBox.innerText = "🚨 你翻出了炸弹💣！注意提防它左右两侧的数字！";
+            msgBox.style.color = "#ef4444";
+        }
+    }
+
+    function selectCard(index) {
+        if (selectedIndex !== -1) document.getElementById(`card-${selectedIndex}`).classList.remove('selected');
+        selectedIndex = index;
+        document.getElementById(`card-${index}`).classList.add('selected');
+        
+        document.getElementById('gambleBtn').disabled = false;
+        const isFlipped = document.getElementById(`card-${index}`).classList.contains('flipped');
+        const msgBox = document.getElementById('gameMsg');
+        
+        if (isFlipped) {
+            const valStr = cardsData[index] === 0 ? "炸弹" : cardsData[index];
+            msgBox.innerText = `已锁定明牌 [ ${valStr} ]。确定它是经过规避后的有效最大值？`;
+            msgBox.style.color = "#2563eb";
+        } else {
+            msgBox.innerText = `⚡ 已锁定未知的暗牌。盲猜暗牌失败将触发【贪婪惩罚】，扣除 3 分最高分！`;
+            msgBox.style.color = "#b45309";
+        }
+    }
+
+    function updatePotentialScore() {
+        const potential = cardsData.length - flippedCount;
+        document.getElementById('potentialScore').innerText = potential;
+    }
+
+    function declareMax() {
+        if (isGameOver || selectedIndex === -1) return;
+        isGameOver = true;
+        document.getElementById('gambleBtn').disabled = true;
+
+        const playerChoiceValue = cardsData[selectedIndex];
+        const isChoiceFlipped = document.getElementById(`card-${selectedIndex}`).classList.contains('flipped');
+
+        // 翻开所有牌进行视觉结算
+        cardsData.forEach((num, index) => {
+            const card = document.getElementById(`card-${index}`);
+            card.classList.add('flipped');
+            if (num === 0) card.classList.add('is-bomb');
+            if (num === actualMaxVal) card.classList.add('is-max');
+            if (actualMaxVal.isKilled && num === actualMaxVal.isKilled) {
+                card.classList.add('is-killed');
+            }
+        });
+
+        const msgElement = document.getElementById('gameMsg');
+        
+        // 胜负判定
+        if (playerChoiceValue === actualMaxVal) {
+            const scoreEarned = cardsData.length - flippedCount;
+            msgElement.innerText = `🎉 极致进化！你赢了！真正的有效最大值是 ${actualMaxVal}。`;
+            if(actualMaxVal.isKilled) msgElement.innerText += ` (原最大值 ${actualMaxVal.isKilled} 邻接炸弹已被销毁！ )`;
+            msgElement.innerText += ` 获得：+${scoreEarned} 分。`;
+            msgElement.style.color = "#10b981";
+
+            if (scoreEarned > highScore) {
+                highScore = scoreEarned;
+                localStorage.setItem('maxCardHighScoreV4', highScore);
+                document.getElementById('highScore').innerText = highScore;
+            }
+        } else {
+            // 失败惩罚机制
+            msgElement.innerText = `❌ 棋差一着！你选的值是 ${playerChoiceValue === 0 ? '💣': playerChoiceValue}，本局真正的有效最大值是 ${actualMaxVal}。`;
+            msgElement.style.color = "#ef4444";
+
+            if (!isChoiceFlipped) {
+                highScore = Math.max(0, highScore - 3);
+                localStorage.setItem('maxCardHighScoreV4', highScore);
+                document.getElementById('highScore').innerText = highScore;
+                msgElement.innerText += " 【盲猜失败惩罚：历史最高分 -3】";
+            }
+        }
+    }
+
+    window.onload = initGame;
+</script>
+
+</body>
+</html>
+<!--
+在引入了“炸弹邻接销毁”**、**“上限数字迷雾”**以及**“倒扣最高分的盲猜惩罚”**后，这个游戏从一个纯粹的概率计算器，变成了一个高难度的**风险控制与信息核验博弈。
+
+在这种极端硬核的规则下，你的盲目侥幸心理会遭到严厉的惩罚（倒扣3分）。以下是经过数学期望与风险对冲后，为您量身定制的**终极最优硬核策略**：
+
+---
+
+## 🚀 核心战略：“三阶段动态核验法”
+
+由于加入了炸弹机制，你无法再仅凭数字大小就直接收手。最完美的博弈流程应该分为三个阶段：
+
+### 阶段一：开局试探与“数字迷雾”测绘（第 1 ~ 2 张）
+
+* **行动**：无脑翻开两张牌。
+* **战略目的**：试探本局的“数字水位线”。因为最高值存在 $\pm15\%$ 的随机浮动，本局上限可能是 85 也可能是 115。
+* **闪电战触发条件**：如果前两张直接开出 **100 以上（如 105）的超高数字**。
+* **判定**：此时它大概率是绝对天花板，且由于它在边缘（或尚未翻出炸弹），它挨着炸弹的概率只有约 $20\%$。
+* **决策**：**直接锁定这张明牌收手！** 搏一把 $80\%$ 的胜率拿 8 分，此时收益期望极高。
+
+
+
+### 阶段二：围绕“炸弹（💣）”的情报战（第 3 ~ 5 张 —— 黄金决策点）
+
+在这几轮中，如果你翻出了**炸弹（💣）**，游戏将进入信息不对称的降维打击状态：
+
+* **情报 A：炸弹已被翻开 💣**
+* 看看炸弹物理位置上**左右相邻**的牌。如果相邻有一张已经是翻开的 96（极大数），**绝对不要选它**！它百分之百被判定为“已炸毁”。此时你应该去寻找远离炸弹的其他较大明牌，或者在剩下暗牌里挑一张远离炸弹的位置进行盲猜。
+* 如果炸弹两边是 5 和 14（很小的数），说明真正的全场最大牌**绝对安全**。此时你可以放心执行常规策略。
+
+
+* **情报 B：翻到第 4 张，炸弹还没出现 ❌💣**
+* 此时如果场上出现了一个 92 左右的较大数字，你将面临巨大的心理战。继续翻牌如果翻出炸弹并在它旁边，92 就会报废。
+* **决策**：如果 92 身边全是暗牌，危险性极高。此时水位线强行下调，只要场上有 88+ 且远离目前翻牌区域的，就可以考虑直接收网断言，落袋为安（拿 6 分或 5 分）。
+
+
+
+### 阶段三：暗牌豪赌的“唯一合法时机”（第 3 ~ 4 张的绝境）
+
+由于盲猜失败会倒扣 3 分最高分，开局乱猜暗牌等同于自杀。在这个版本里，**盲猜暗牌只有一种情况被允许**：
+
+* **触发场景**：你翻开了前 4 张牌，结果全场最大只有 45，而且更走运的是，**炸弹在第 1 张就被你翻出来了**（排除了最大值被炸毁的未知隐患）。
+* **局势分析**：这说明剩下的 6 张暗牌里，**必然 100% 藏着一个没有被炸毁的顶级大牌（如 90+）**。
+* **决策**：此时别再翻第 5 张了（再翻明牌就贬值了）。由于炸弹已明，你直接在远离炸弹的暗牌堆里**盲点一张**发起断言！你此时有 $\frac{1}{6} \approx 16.7\%$ 的概率直接斩获 6 分。如果不幸猜错，说明大牌在其他暗牌里，但这属于**数学上唯一值得用“最高分-3”去对赌的高价值博弈点**。
+
+---
+
+## 📊 硬核水位线精算表（明牌拦截流）
+
+如果你决定不冒扣分风险，只断言**明牌**，在防范炸弹的前提下，请严格遵守以下**风险修正后的水位线**：
+
+| 已翻开明牌数 | 剩余牌数 (猜对得分) | 只要场上存在 **$\ge$ 该数字** 的明牌，且确认**未被炸毁**，立刻断言！ |
+| --- | --- | --- |
+| **1 ~ 2 张** | 8 ~ 9 分 | **98 +**（或者任何大于基础范围 100 的数字） |
+| **3 张** | 7 分 | **93 +**（且该牌不与已知的 💣 相邻） |
+| **4 张** | 6 分 | **88 +**（若 💣 仍未出现，此数字安全感最高） |
+| **5 张** | 5 分 | **82 +**（博弈过半，不要再贪，有中等偏上数字立刻交牌） |
+| **6 ~ 7 张** | 3 ~ 4 分 | **75 +**（此时分数贬值，最大值可能也大不到哪去了） |
+| **8 张以上** | 2 分以下 | **无脑全部翻开**，找出那个活下来的最大数字提交。 |
+
+## 🏆 进阶通关口诀
+
+> **开局高数直接秒，翻出炸弹看两边。**
+> **老大挨炸选老二，炸弹没出别太贪。**
+> **明牌全小暗牌肥，炸弹已明可赌天。**
+ -->
