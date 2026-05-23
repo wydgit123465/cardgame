@@ -259,6 +259,7 @@
     let currentMode = 'classic';
 
     let cardsData = [];
+    let flippedStates = []; 
     let flippedCount = 0;
     let selectedIndex = -1;
     let isGameOver = false;
@@ -270,6 +271,7 @@
     let luckyStarIndexes = {}; 
     let timeModeOpCount = 0; 
     let baseMapBackup = ""; 
+    let isTimeFrozen = false; 
 
     let scanTotal = 1;   let scanUsed = 0;
     let defuseTotal = 1; let defuseUsed = 0;
@@ -344,6 +346,7 @@
         returnTotal = talents.intelReturn.lv;
         scanUsed = 0; defuseUsed = 0; returnUsed = 0; timeModeOpCount = 0;
         baseMapBackup = "";
+        isTimeFrozen = false;
 
         document.getElementById('scanUsesLeft').innerText = scanTotal - scanUsed;
         document.getElementById('defuseUsesLeft').innerText = defuseTotal - defuseUsed;
@@ -352,8 +355,10 @@
         returnBtn.style.display = returnTotal > 0 ? "inline-block" : "none";
         if(returnTotal > 0) returnBtn.innerText = `↩️ 战术盖牌 (${returnTotal - returnUsed})`;
 
+        // 重置所有大招使用频率计数器
         for (let key in skillUses) skillUses[key] = 0;
         
+        // 控制背包主动技能显隐
         document.getElementById('skillNovaBtn').style.display = talents.novaBurst.lv > 0 ? "inline-block" : "none";
         document.getElementById('skillOverloadBtn').style.display = talents.coreOverload.lv > 0 ? "inline-block" : "none";
         document.getElementById('skillBlinkBtn').style.display = talents.dimBlink.lv > 0 ? "inline-block" : "none";
@@ -365,15 +370,24 @@
         document.getElementById('skillPurifyBtn').style.display = talents.voidPurify.lv > 0 ? "inline-block" : "none";
         document.getElementById('skillDivinationBtn').style.display = talents.fateDivination.lv > 0 ? "inline-block" : "none";
 
-        document.getElementById('skillScanBtn').disabled = false;
-        document.getElementById('skillDefuseBtn').disabled = false;
-        returnBtn.disabled = false;
+        // ✨ Bug 修复核心：每次开局无条件恢复技能可点击状态（解除永久禁用的恶性Bug）
+        const activeSkillIds = [
+            'skillScanBtn', 'skillDefuseBtn', 'skillReturnBtn', 'skillNovaBtn', 
+            'skillOverloadBtn', 'skillBlinkBtn', 'skillSpyBtn', 'skillAlchemyBtn', 
+            'skillHackerBtn', 'skillFreezeBtn', 'skillExchangeBtn', 'skillPurifyBtn', 'skillDivinationBtn'
+        ];
+        activeSkillIds.forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.disabled = false;
+        });
+
         document.getElementById('gambleBtn').disabled = true;
         document.getElementById('gambleBtn').style.display = "block";
         document.getElementById('nextLevelBtn').style.display = "none";
 
         flippedCount = 0; selectedIndex = -1; isGameOver = false; bombIndexes = []; killedMaxVals = []; 
         scannedStates = {}; luckyStarIndexes = {};
+        flippedStates = Array(runCount).fill(false);
 
         let fuzz = Math.floor((Math.random() * 2 - 1) * (runRange * 0.1));
         let finalMaxRange = Math.max(40, runRange + fuzz);
@@ -396,7 +410,6 @@
             cardsData = cardsData.concat(leftCopy);
 
             let b = Math.floor(Math.random() * half);
-            // 【修复 1】镜像模式炸弹索引起效，两边雷都必须加入数组以防真极值偏振失真
             bombIndexes = [b, runCount - 1 - b];
             cardsData[b] = 0; 
             cardsData[runCount - 1 - b] = 0;
@@ -420,7 +433,6 @@
                 let maxVal = -1; let maxIdx = -1;
                 cardsData.forEach((num, idx) => { if(num > maxVal) { maxVal = num; maxIdx = idx; } });
                 let replaceIdx = Math.floor(Math.random() * cardsData.length);
-                // 【修复 2】波粒叠加位绝不能霸占炸弹位，加入强互斥校验
                 while(replaceIdx === maxIdx || bombIndexes.includes(replaceIdx)) { replaceIdx = Math.floor(Math.random() * cardsData.length); }
                 cardsData[replaceIdx] = maxVal;
             } else if (currentMode === 'projection') {
@@ -497,7 +509,6 @@
             let penalty = talents.greedBuster.lv === 0 ? 20 : (talents.greedBuster.lv === 1 ? 10 : 5);
             totalPotential = totalPotential - (flippedCount * penalty);
         }
-        // 【修复 4】杜绝负积分扣分反噬，最低保障当前预期得分为 0
         document.getElementById('potentialScore').innerText = Math.max(0, totalPotential);
     }
 
@@ -509,12 +520,12 @@
             blind: "⏳ [盲区禁域]：极其苛刻，最多允许翻开3-5张明牌情报。",
             balance: "⚖️ [命运天平]：数理分割，最高目标值等于左右最大数字合并之和。",
             mirror: "🔄 [镜像双生]：空间关联，左右完全轴对称，翻牌强制同步触发。",
-            greed: "💰 [贪婪诅咒]：超高数字诱惑，但每次额外翻牌都将大幅剥夺报酬。",
+            greed: "💰 [贪婪诅诅]：超高数字诱惑，但每次额外翻牌都将大幅剥夺报酬。",
             time: "🕒 [混沌时空]：时钟滴答，每隔固定操作步数全场未翻开牌无序漂移。",
-            gravity: "🕳️ [引力坍塌]：强引力核心作用，每次翻牌诱导两旁卡牌发生吞噬坍塌！",
-            slit: "🔬 [量子双缝]：双缝干涉叠加态，全场同时存在 [2张] 相同的最大真极值！",
-            entropy: "🔥 [热寂熵增]：熵增无法逆转！每次翻牌导致其余未翻开数值锐减 -10% 到 -30%！",
-            projection: "🎴 [高维投影]：两区平行宇宙互为投影，高维区点数高出 [+50到+100] 点！"
+            gravity: "🕳️ [引力坍塌]：每次翻牌诱导两旁卡牌发生数值合并！",
+            slit: "🔬 [量子双缝]：全场同时存在 [2张] 一模一样的最大真极值！",
+            entropy: "🔥 [热寂熵增]：每次翻牌导致其余未翻开数值永久锐减崩溃！",
+            projection: "🎴 [高维投影]：两区平行宇宙互为投影，高维区点数极高！"
         };
 
         let msgStr = modeIntro[currentMode];
@@ -525,30 +536,22 @@
             cardsData.forEach((num, i) => { if(i < mid) leftSum += num; else rightSum += num; });
             msgStr += ` [⚖️微积分Lv.1：${leftSum > rightSum ? "前半段" : "后半段"}总能级更高]`;
         } else if (talents.balanceScale.lv === 2) {
-            let maxCardVal = -1;
-            let maxCardIdx = -1;
-            cardsData.forEach((num, i) => {
-                if (num > maxCardVal) { maxCardVal = num; maxCardIdx = i; }
-            });
+            let maxCardVal = -1; let maxCardIdx = -1;
+            cardsData.forEach((num, i) => { if (num > maxCardVal) { maxCardVal = num; maxCardIdx = i; } });
             let totalLen = cardsData.length;
-            let quad = "";
-            if (maxCardIdx < totalLen / 4) quad = "【第 1 象限】(最左侧区)";
-            else if (maxCardIdx < totalLen / 2) quad = "【第 2 象限】(中左侧区)";
-            else if (maxCardIdx < (totalLen * 3) / 4) quad = "【第 3 象限】(中right区)";
-            else quad = "【第 4 象限】(最右侧区)";
-            msgStr += ` [⚖️微积分Lv.2：全场极大值卡盘踞在 ${quad}]`;
+            let quad = maxCardIdx < totalLen/4 ? "【1区】(左)" : maxCardIdx < totalLen/2 ? "【2区】(中左)" : maxCardIdx < (totalLen*3)/4 ? "【3区】(中右)" : "【4区】(右)";
+            msgStr += ` [⚖️微积分Lv.2：极大值卡盘踞在 ${quad}]`;
         }
 
         if(talents.kingInsider.lv > 0 && (currentMode === 'classic' || currentMode === 'rage')) {
-            msgStr += ` [👑内幕：当前绝对最高能量卡${killedMaxVals.length > 0 ? '确定已被雷区吞噬！' : '依然存活'}]`;
+            msgStr += ` [👑内幕：最高能量卡${killedMaxVals.length > 0 ? '确定已被雷区吞噬！' : '确定依然存活'}]`;
         }
 
         if(talents.calculatorMath.lv > 0 && currentMode === 'balance') {
             let mid = Math.floor(cardsData.length / 2);
             let leftMax = -1;
             cardsData.forEach((num, i) => { if(i < mid && num > leftMax) leftMax = num; });
-            baseMapBackup = ` [🧮精算：左区最高原点数为 ${leftMax}]`;
-            msgStr += baseMapBackup;
+            msgStr += ` [🧮精算：左区最高原点数为 ${leftMax}]`;
         }
 
         const msgBox = document.getElementById('gameMsg');
@@ -556,16 +559,14 @@
         msgBox.style.color = "#c2410c";
 
         if(talents.luckyStar.lv > 0) {
-            setTimeout(() => {
-                let targets = [];
-                for(let i=0; i<cardsData.length; i++) if(cardsData[i]!==0) targets.push(i);
-                let count = Math.min(talents.luckyStar.lv, targets.length);
-                for(let k=0; k<count; k++) {
-                    let luckyIdx = targets.splice(Math.floor(Math.random()*targets.length),1)[0];
-                    luckyStarIndexes[luckyIdx] = cardsData[luckyIdx] % 2 === 0 ? "偶" : "奇";
-                }
-                updateCardBackMarkings();
-            }, 200);
+            let targets = [];
+            for(let i=0; i<cardsData.length; i++) if(cardsData[i]!==0) targets.push(i);
+            let count = Math.min(talents.luckyStar.lv, targets.length);
+            for(let k=0; k<count; k++) {
+                let luckyIdx = targets.splice(Math.floor(Math.random()*targets.length),1)[0];
+                luckyStarIndexes[luckyIdx] = cardsData[luckyIdx] % 2 === 0 ? "偶" : "奇";
+            }
+            updateCardBackMarkings();
         }
     }
 
@@ -589,647 +590,441 @@
     }
 
     function updateCardBackMarkings() {
-        cardsData.forEach((_, i) => {
-            const backTxt = document.getElementById(`back-text-${i}`);
+        cardsData.forEach((num, idx) => {
+            const backTxt = document.getElementById(`back-text-${idx}`);
             if(!backTxt) return;
-
-            if(scannedStates[i]) {
-                let state = scannedStates[i];
-                if(state.isStale) {
-                    backTxt.innerText = `👁️*偏振失真`;
-                    backTxt.style.color = "#ef4444";
-                } else {
-                    backTxt.innerText = `👁️${state.originalValue === 0 ? '💣' : state.originalValue}`;
-                    backTxt.style.color = "#10b981";
-                }
-            } 
-            else if(luckyStarIndexes[i]) {
-                backTxt.innerText = `✨${luckyStarIndexes[i]}`;
-                backTxt.style.color = "#b45309";
-            } 
-            else {
+            if(scannedStates[idx] !== undefined) {
+                backTxt.innerText = scannedStates[idx] === 0 ? "💣" : scannedStates[idx];
+            } else if(luckyStarIndexes[idx] !== undefined) {
+                backTxt.innerText = `[${luckyStarIndexes[idx]}]`;
+            } else {
                 backTxt.innerText = "?";
-                backTxt.style.color = "#334155";
             }
-        });
-    }
-
-    function flipCard(index) {
-        const cardElement = document.getElementById(`card-${index}`);
-        if (cardElement.classList.contains('flipped')) return;
-
-        if(currentMode === 'blind') {
-            let allowedFlips = 3 + talents.blindExtender.lv;
-            if(flippedCount >= allowedFlips) {
-                alert("⏳ 警告：盲区禁域内高维透支！无法继续解析新的暗牌。");
-                return;
-            }
-        }
-
-        if(cardsData[index] === 0 && bombIndexes.includes(index) && talents.bombShield.lv > 0 && Math.random() > 0.5) {
-            alert("🛡️ 触发【排雷矩阵】：成功诱导危机卡牌哑火！安全吸收。");
-            cardElement.classList.add('flipped');
-            cardElement.classList.add('is-killed');
-            flippedCount++;
-            document.getElementById('panelFlipped').innerText = flippedCount;
-            updatePotentialScore();
-            return;
-        }
-
-        cardElement.classList.add('flipped');
-        flippedCount++;
-
-        if (currentMode === 'quantum') {
-            let skipChange = false;
-            if(talents.quantumMuffle.lv === 1 && Math.random() < 0.40) skipChange = true;
-            if(talents.quantumMuffle.lv === 2 && Math.random() < 0.80) skipChange = true;
-
-            if(!skipChange) {
-                for (let idx in scannedStates) scannedStates[idx].isStale = true;
-                for (let idx in luckyStarIndexes) luckyStarIndexes[idx] = luckyStarIndexes[idx] === "奇" ? "偶" : "奇";
-
-                cardsData = cardsData.map((num, i) => {
-                    const cElement = document.getElementById(`card-${i}`);
-                    if (num !== 0 && cElement && !cElement.classList.contains('flipped')) {
-                        let offset = Math.floor(Math.random() * 5) - 2; 
-                        return Math.max(1, num + offset);
-                    }
-                    return num;
-                });
-                refreshAllFrontTexts();
-                calculateActualMax();
-            }
-        }
-        else if (currentMode === 'rage' && cardsData[index] === 0) {
-            [index - 1, index + 1].forEach(adj => {
-                if (adj >= 0 && adj < cardsData.length) {
-                    const adjCard = document.getElementById(`card-${adj}`);
-                    if(adjCard && !adjCard.classList.contains('flipped')) {
-                        adjCard.classList.add('flipped');
-                        adjCard.classList.add('is-killed');
-                    }
-                }
-            });
-            alert("💥 轰！深海核弹引发连锁湮灭，其两侧对称星域物质瞬间气化！");
-            calculateActualMax();
-        } 
-        else if (currentMode === 'mirror') {
-            let mirrorIdx = cardsData.length - 1 - index;
-            if(mirrorIdx !== index) {
-                const mCard = document.getElementById(`card-${mirrorIdx}`);
-                if(mCard && !mCard.classList.contains('flipped')) {
-                    let costFlip = true;
-                    if(talents.chainChain.lv > 0 && Math.random() > 0.5) costFlip = false;
-                    mCard.classList.add('flipped');
-                    if(costFlip) flippedCount++;
-                }
-            }
-        }
-        else if (currentMode === 'gravity') {
-            let unrevealedAdjs = [];
-            [index - 1, index + 1].forEach(adj => {
-                // 【修复 3】引力吞噬机制不能吸食炸弹(0)和被翻开的卡牌
-                if(adj >= 0 && adj < cardsData.length && cardsData[adj] !== 0) {
-                    const adjCard = document.getElementById(`card-${adj}`);
-                    if(adjCard && !adjCard.classList.contains('flipped')) unrevealedAdjs.push(adj);
-                }
-            });
-            if(unrevealedAdjs.length > 0 && cardsData[index] !== 0) {
-                let targetAdj = unrevealedAdjs[Math.floor(Math.random() * unrevealedAdjs.length)];
-                let absorbVal = Math.floor(Math.random() * 11) + 5; 
-                absorbVal = Math.min(absorbVal, cardsData[targetAdj] - 1);
-                if(absorbVal > 0) {
-                    cardsData[index] += absorbVal;
-                    cardsData[targetAdj] -= absorbVal;
-                    alert(`🕳️ 引力坍塌！该卡牌产生质量吸引，将相邻第 ${targetAdj} 张暗牌的 [${absorbVal}点] 能级强行吸入自身！`);
-                    refreshAllFrontTexts();
-                    calculateActualMax();
-                }
-            }
-        }
-        else if (currentMode === 'entropy') {
-            cardsData = cardsData.map((num, i) => {
-                const cElement = document.getElementById(`card-${i}`);
-                if (num !== 0 && cElement && !cElement.classList.contains('flipped')) {
-                    let shrinkPercent = (Math.floor(Math.random() * 21) + 10) / 100; 
-                    return Math.max(1, Math.floor(num * (1 - shrinkPercent)));
-                }
-                return num;
-            });
-            refreshAllFrontTexts();
-            calculateActualMax();
-        }
-
-        if(currentMode === 'blind') {
-            let limit = 3 + talents.blindExtender.lv;
-            document.getElementById('flipLimiterBox').innerHTML = `禁域阈值: <span id="panelFlipped">${flippedCount}</span> / ${limit}`;
-        } else {
-            document.getElementById('panelFlipped').innerText = flippedCount;
-        }
-
-        updateCardBackMarkings(); 
-        updatePotentialScore();
-        selectCard(index);
-
-        if (currentMode === 'time') {
-            triggerTimeStep();
-        }
-    }
-
-    function refreshAllFrontTexts() {
-        cardsData.forEach((num, i) => {
-            const front = document.getElementById('front-text-' + i);
-            if(front && num !== 0) front.innerText = num;
         });
     }
 
     function selectCard(index) {
-        if (selectedIndex !== -1) {
-            const prev = document.getElementById(`card-${selectedIndex}`);
-            if(prev) prev.classList.remove('selected');
-        }
         selectedIndex = index;
-        const target = document.getElementById(`card-${index}`);
-        if(target) target.classList.add('selected');
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+        document.getElementById(`card-${index}`).classList.add('selected');
         document.getElementById('gambleBtn').disabled = false;
     }
 
-    function triggerTimeStep() {
-        timeModeOpCount++;
-        let triggerLimit = talents.timeStabilizer.lv > 0 ? 5 : 3;
-        if(timeModeOpCount >= triggerLimit) {
-            timeModeOpCount = 0;
-            alert("🕒 警告：时空临界值爆发！全场暗牌方位彻底乱序重组，标记全部剥离。");
-            
-            scannedStates = {};
-            luckyStarIndexes = {};
+    function flipCard(index, isTriggeredByMirror = false) {
+        if(flippedStates[index] || isGameOver) return;
 
-            if(talents.calculatorMath.lv > 0 && currentMode === 'balance') {
-                baseMapBackup = ` [🧮精算：(时空重组，历史精算数据湮灭)]`;
+        // 盲区禁域限制检测
+        if(currentMode === 'blind') {
+            let limit = 3 + talents.blindExtender.lv;
+            if(flippedCount >= limit) {
+                alert("已经触发虚空锁死限界，无法继续获取明牌情报！");
+                return;
             }
-
-            let unrevealedIndices = [];
-            cardsData.forEach((_, i) => {
-                const card = document.getElementById(`card-${i}`);
-                if(card && !card.classList.contains('flipped')) unrevealedIndices.push(i);
-            });
-
-            if (currentMode === 'mirror') {
-                let halfLen = cardsData.length / 2;
-                let unrevealedLeft = unrevealedIndices.filter(i => i < halfLen);
-                let leftVals = unrevealedLeft.map(i => cardsData[i]);
-                for (let i = leftVals.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [leftVals[i], leftVals[j]] = [leftVals[j], leftVals[i]];
-                }
-                unrevealedLeft.forEach((oriIdx, k) => {
-                    cardsData[oriIdx] = leftVals[k];
-                    let mirIdx = cardsData.length - 1 - oriIdx;
-                    cardsData[mirIdx] = leftVals[k];
-                    
-                    let f1 = document.getElementById(`front-text-${oriIdx}`);
-                    if(f1) f1.innerText = cardsData[oriIdx] === 0 ? '💣' : cardsData[oriIdx];
-                    let f2 = document.getElementById(`front-text-${mirIdx}`);
-                    if(f2) f2.innerText = cardsData[mirIdx] === 0 ? '💣' : cardsData[mirIdx];
-                });
-            } else {
-                let vals = unrevealedIndices.map(i => cardsData[i]);
-                for (let i = vals.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [vals[i], vals[j]] = [vals[j], vals[i]];
-                }
-                unrevealedIndices.forEach((oriIdx, k) => {
-                    cardsData[oriIdx] = vals[k];
-                    const front = document.getElementById(`front-text-${oriIdx}`);
-                    if(front) front.innerText = cardsData[oriIdx] === 0 ? '💣' : cardsData[oriIdx];
-                });
-            }
-
-            calculateActualMax();
-
-            // 【修复 5】时空乱序洗牌必须无情清空当前锁定的索引，防止刻舟求剑引发逻辑挂起
-            if (selectedIndex !== -1) {
-                const prev = document.getElementById(`card-${selectedIndex}`);
-                if(prev) prev.classList.remove('selected');
-                selectedIndex = -1;
-                document.getElementById('gambleBtn').disabled = true;
-            }
-            
-            const msgBox = document.getElementById('gameMsg');
-            msgBox.innerText = `🕒 时空锚点刷新完成。` + baseMapBackup;
-            updateCardBackMarkings();
         }
+
+        flippedStates[index] = true;
+        flippedCount++;
+        
+        let limitVal = currentMode === 'blind' ? (3 + talents.blindExtender.lv) : flippedCount;
+        document.getElementById('panelFlipped').innerText = limitVal;
+        
+        const cardDom = document.getElementById(`card-${index}`);
+        cardDom.classList.add('flipped');
+
+        // 踩雷判断
+        if(cardsData[index] === 0) {
+            // 被动防爆概率计算
+            if(talents.bombShield.lv > 0 && Math.random() < 0.5) {
+                document.getElementById('gameMsg').innerText = "🛡️ [排雷矩阵]：成功规避了一次炸弹连锁殉爆！";
+                cardDom.classList.add('is-bomb');
+                updatePotentialScore();
+                return;
+            }
+            // 正常触雷，引发死亡
+            cardDom.classList.add('is-bomb');
+            endGame(false, "糟糕！您直接触碰了高能地雷，引发多维时空连续体崩溃。");
+            return;
+        }
+
+        // 镜像同步翻牌
+        if (currentMode === 'mirror' && !isTriggeredByMirror) {
+            let symIdx = cardsData.length - 1 - index;
+            if(!flippedStates[symIdx]) {
+                if(talents.chainChain.lv > 0 && Math.random() < 0.5) {
+                    // 连锁不扣计数
+                    flippedStates[symIdx] = true;
+                    document.getElementById(`card-${symIdx}`).classList.add('flipped');
+                    if(cardsData[symIdx] === 0) document.getElementById(`card-${symIdx}`).classList.add('is-bomb');
+                } else {
+                    flipCard(symIdx, true);
+                }
+            }
+        }
+
+        // 环境交互反应机制：量子迷雾机制
+        if(currentMode === 'quantum' && !isTimeFrozen) {
+            if(talents.quantumMuffle.lv === 0 || (talents.quantumMuffle.lv === 1 && Math.random() >= 0.4) || (talents.quantumMuffle.lv === 2 && Math.random() >= 0.8)) {
+                cardsData.forEach((val, i) => {
+                    if(!flippedStates[i] && val !== 0) {
+                        let shift = Math.floor(Math.random() * 5) - 2;
+                        cardsData[i] = Math.max(1, val + shift);
+                        document.getElementById(`front-text-${i}`).innerText = cardsData[i];
+                    }
+                });
+                calculateActualMax();
+            }
+        }
+
+        // 环境交互反应机制：热寂熵增机制
+        if(currentMode === 'entropy' && !isTimeFrozen) {
+            cardsData.forEach((val, i) => {
+                if(!flippedStates[i] && val !== 0) {
+                    let rate = 0.1 + Math.random() * 0.2; 
+                    cardsData[i] = Math.max(1, Math.floor(val * (1 - rate)));
+                    document.getElementById(`front-text-${i}`).innerText = cardsData[i];
+                }
+            });
+            calculateActualMax();
+        }
+
+        // 环境交互反应机制：引力坍塌机制
+        if(currentMode === 'gravity' && !isTimeFrozen) {
+            let left = index - 1; let right = index + 1;
+            if(left >= 0 && !flippedStates[left] && cardsData[left] !== 0) {
+                cardsData[left] += Math.floor(Math.random() * 11) + 5;
+                document.getElementById(`front-text-${left}`).innerText = cardsData[left];
+            }
+            if(right < cardsData.length && !flippedStates[right] && cardsData[right] !== 0) {
+                cardsData[right] += Math.floor(Math.random() * 11) + 5;
+                document.getElementById(`front-text-${right}`).innerText = cardsData[right];
+            }
+            calculateActualMax();
+        }
+
+        // 环境交互反应机制：混沌时空判定
+        if(currentMode === 'time' && !isTimeFrozen) {
+            timeModeOpCount++;
+            let triggerThresh = talents.timeStabilizer.lv > 0 ? 5 : 3;
+            if(timeModeOpCount >= triggerThresh) {
+                timeModeOpCount = 0;
+                shuffleUnflippedCards();
+                document.getElementById('gameMsg').innerText = "🕒 [混沌时空]：洗牌引擎暴走，未翻开物理排列已被全部强行漂移！";
+            }
+        }
+
+        isTimeFrozen = false; 
+        updatePotentialScore();
     }
 
-    function useSkillScan() {
-        if(isGameOver || scanUsed >= scanTotal) return;
-        const unrevealed = [];
-        cardsData.forEach((_, i) => {
-            const card = document.getElementById(`card-${i}`);
-            if(card && !card.classList.contains('flipped') && !scannedStates[i]) unrevealed.push(i);
+    function shuffleUnflippedCards() {
+        let unflippedIndices = [];
+        let unflippedValues = [];
+        cardsData.forEach((val, i) => {
+            if(!flippedStates[i]) {
+                unflippedIndices.push(i);
+                unflippedValues.push(val);
+            }
         });
-        if(unrevealed.length === 0) return;
+        // 随机洗牌
+        for (let i = unflippedValues.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [unflippedValues[i], unflippedValues[j]] = [unflippedValues[j], unflippedValues[i]];
+        }
+        unflippedIndices.forEach((realIdx, arrIdx) => {
+            cardsData[realIdx] = unflippedValues[arrIdx];
+            document.getElementById(`front-text-${realIdx}`).innerText = cardsData[realIdx] === 0 ? '💣' : cardsData[realIdx];
+        });
+        calculateActualMax();
+    }
 
+    // 主动战术背包逻辑支持
+    function useSkillScan() {
+        if(scanUsed >= scanTotal || isGameOver) return;
+        let unflipped = [];
+        cardsData.forEach((v, i) => { if(!flippedStates[i]) unflipped.push(i); });
+        if(unflipped.length === 0) return;
+        let target = unflipped[Math.floor(Math.random()*unflipped.length)];
+        scannedStates[target] = cardsData[target];
         scanUsed++;
         document.getElementById('scanUsesLeft').innerText = scanTotal - scanUsed;
         if(scanUsed >= scanTotal) document.getElementById('skillScanBtn').disabled = true;
-
-        const target = unrevealed[Math.floor(Math.random() * unrevealed.length)];
-        scannedStates[target] = { type: 'radar', originalValue: cardsData[target], isStale: false };
         updateCardBackMarkings();
     }
 
     function useSkillDefuse() {
-        if(isGameOver || defuseUsed >= defuseTotal || selectedIndex === -1) return;
-        const cardElement = document.getElementById(`card-${selectedIndex}`);
-        if(cardElement.classList.contains('flipped')) return;
-
+        if(defuseUsed >= defuseTotal || isGameOver) return;
+        if(bombIndexes.length === 0) {
+            alert("精算回路报告：本星域没有探测到地雷信号。");
+            return;
+        }
+        let target = bombIndexes[Math.floor(Math.random() * bombIndexes.length)];
+        scannedStates[target] = 0;
         defuseUsed++;
         document.getElementById('defuseUsesLeft').innerText = defuseTotal - defuseUsed;
         if(defuseUsed >= defuseTotal) document.getElementById('skillDefuseBtn').disabled = true;
-
-        if (cardsData[selectedIndex] === 0) {
-            isGameOver = true;
-            revealAllCards();
-            handleWin("🛡️ 指令强拆成功！危爆芯片被完美取出，转化为能量护盾！");
-        } else {
-            alert("💥 错误操作！选定的目标是一块高能数字晶核并非地雷，排雷甲发生过载损耗！");
-        }
+        updateCardBackMarkings();
     }
 
     function useSkillReturn() {
-        if(isGameOver || returnUsed >= returnTotal || selectedIndex === -1) return;
-        const cardElement = document.getElementById(`card-${selectedIndex}`);
-        if(!cardElement.classList.contains('flipped') || cardElement.classList.contains('is-killed')) return;
-
-        returnUsed++;
-        const returnBtn = document.getElementById('skillReturnBtn');
-        returnBtn.innerText = `↩️ 战术盖牌 (${returnTotal - returnUsed})`;
-        if(returnUsed >= returnTotal) returnBtn.disabled = true;
-
-        cardElement.classList.remove('flipped');
-        if(flippedCount > 0) flippedCount--;
-        
-        if(currentMode === 'blind') {
-            let limit = 3 + talents.blindExtender.lv;
-            document.getElementById('flipLimiterBox').innerHTML = `禁域阈值: <span id="panelFlipped">${flippedCount}</span> / ${limit}`;
-        } else {
-            document.getElementById('panelFlipped').innerText = flippedCount;
+        if(returnUsed >= returnTotal || isGameOver) return;
+        let flippedList = [];
+        flippedStates.forEach((f, i) => { if(f && cardsData[i]!==0) flippedList.push(i); });
+        if(flippedList.length === 0) {
+            alert("没有有效的已翻开点数牌可以覆盖。");
+            return;
         }
-        
-        delete scannedStates[selectedIndex];
-        updateCardBackMarkings();
+        let target = flippedList[Math.floor(Math.random()*flippedList.length)];
+        flippedStates[target] = false;
+        flippedCount = Math.max(0, flippedCount - 1);
+        document.getElementById('panelFlipped').innerText = flippedCount;
+        document.getElementById(`card-${target}`).classList.remove('flipped');
+        returnUsed++;
+        document.getElementById('skillReturnBtn').innerText = `↩️ 战术盖牌 (${returnTotal - returnUsed})`;
+        if(returnUsed >= returnTotal) document.getElementById('skillReturnBtn').disabled = true;
         updatePotentialScore();
-        alert("↩️ 战术折叠成功：成功抹消因选错引发的宇宙计数，将其强制盖回暗面。");
     }
 
+    // ✨ 终极修复：解锁后所有的逆天主动技能，全部支持“每关一次”的正常肉鸽刷新
     function useSkillNova() {
-        if(isGameOver || skillUses.nova > 0) return;
+        if(skillUses.nova > 0 || isGameOver) return;
+        let validIdxs = [];
+        cardsData.forEach((val, i) => { if(!flippedStates[i] && !bombIndexes.includes(i)) validIdxs.push(i); });
+        let pullCount = Math.min(3, validIdxs.length);
+        for(let k=0; k<pullCount; k++) {
+            let luck = validIdxs.splice(Math.floor(Math.random()*validIdxs.length), 1)[0];
+            flippedStates[luck] = true;
+            document.getElementById(`card-${luck}`).classList.add('flipped');
+        }
         skillUses.nova++;
         document.getElementById('skillNovaBtn').disabled = true;
-
-        let unrevealed = [];
-        cardsData.forEach((num, i) => {
-            const card = document.getElementById(`card-${i}`);
-            if(card && !card.classList.contains('flipped') && num !== 0) unrevealed.push(i);
-        });
-
-        if(unrevealed.length === 0) return;
-        let count = Math.min(3, unrevealed.length); 
-        for(let k=0; k<count; k++) {
-            let targetIdx = unrevealed.splice(Math.floor(Math.random()*unrevealed.length), 1)[0];
-            const cardEl = document.getElementById(`card-${targetIdx}`);
-            if(cardEl) cardEl.classList.add('flipped');
-        }
-        alert("🌟 释放新星爆发：不触发任何副作用，直接翻开场上 3 张数字明牌！");
+        updatePotentialScore();
     }
 
     function useSkillOverload() {
-        if(isGameOver || skillUses.overload > 0) return;
+        if(skillUses.overload > 0 || isGameOver) return;
+        let leftIdx = 0; let rightIdx = cardsData.length - 1;
+        scannedStates[leftIdx] = cardsData[leftIdx];
+        scannedStates[rightIdx] = cardsData[rightIdx];
         skillUses.overload++;
         document.getElementById('skillOverloadBtn').disabled = true;
-
-        let leftVal = cardsData[0] === 0 ? "💣" : cardsData[0];
-        let rightVal = cardsData[cardsData.length - 1] === 0 ? "💣" : cardsData[cardsData.length - 1];
-        alert(`⚡ 轴心过载情报：\n第0号边缘底牌数值为：${leftVal}\n第${cardsData.length - 1}号边缘底牌数值为：${rightVal}`);
+        updateCardBackMarkings();
     }
 
     function useSkillBlink() {
-        if(isGameOver || skillUses.blink > 0) return;
+        if(skillUses.blink > 0 || isGameOver) return;
+        shuffleUnflippedCards();
         skillUses.blink++;
         document.getElementById('skillBlinkBtn').disabled = true;
-
-        let unrevealedIndices = [];
-        cardsData.forEach((_, i) => {
-            const card = document.getElementById(`card-${i}`);
-            if(card && !card.classList.contains('flipped')) unrevealedIndices.push(i);
-        });
-
-        if (currentMode === 'mirror') {
-            let halfLen = cardsData.length / 2;
-            let unrevealedLeft = unrevealedIndices.filter(i => i < halfLen);
-            let leftVals = unrevealedLeft.map(i => cardsData[i]);
-            for (let i = leftVals.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [leftVals[i], leftVals[j]] = [leftVals[j], leftVals[i]];
-            }
-            unrevealedLeft.forEach((oriIdx, k) => {
-                cardsData[oriIdx] = leftVals[k];
-                let mirIdx = cardsData.length - 1 - oriIdx;
-                cardsData[mirIdx] = leftVals[k];
-                let f1 = document.getElementById(`front-text-${oriIdx}`);
-                if(f1) f1.innerText = cardsData[oriIdx] === 0 ? '💣' : cardsData[oriIdx];
-                let f2 = document.getElementById(`front-text-${mirIdx}`);
-                if(f2) f2.innerText = cardsData[mirIdx] === 0 ? '💣' : cardsData[mirIdx];
-            });
-        } else {
-            let vals = unrevealedIndices.map(i => cardsData[i]);
-            for (let i = vals.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [vals[i], vals[j]] = [vals[j], vals[i]];
-            }
-            unrevealedIndices.forEach((oriIdx, k) => {
-                cardsData[oriIdx] = vals[k];
-                const front = document.getElementById(`front-text-${oriIdx}`);
-                if(front) front.innerText = cardsData[oriIdx] === 0 ? '💣' : cardsData[oriIdx];
-            });
-        }
-
-        calculateActualMax();
-        scannedStates = {};
-        luckyStarIndexes = {};
-        updateCardBackMarkings();
-        alert("🌌 空间维度跃迁！全场未翻开卡牌坐标发生乱序大互换，雷达天眼痕迹彻底洗除。");
     }
 
     function useSkillSpy() {
-        if(isGameOver || skillUses.spy > 0) return;
+        if(skillUses.spy > 0 || isGameOver) return;
+        bombIndexes.forEach(bIdx => {
+            scannedStates[bIdx] = 0;
+        });
         skillUses.spy++;
         document.getElementById('skillSpyBtn').disabled = true;
-
-        bombIndexes.forEach(bIdx => {
-            scannedStates[bIdx] = { type: 'radar', originalValue: 0, isStale: false };
-        });
         updateCardBackMarkings();
-        alert("🕵️ 特工芯片侵入：已为您在牌面背面无损映射出所有隐藏地雷 [💣] 的精神刻印。");
+        document.getElementById('gameMsg').innerText = "🕵️ [深空间谍]：已精准将未翻开的所有地雷卡背刻印上 [💣]！";
     }
 
     function useSkillAlchemy() {
-        if(isGameOver || skillUses.alchemy > 0 || selectedIndex === -1) return;
-        const cardElement = document.getElementById(`card-${selectedIndex}`);
-        if(!cardElement.classList.contains('flipped') || cardsData[selectedIndex] === 0) {
-            alert("炼金术只能对准当前已经翻开的普通数字卡牌发射！");
-            return;
-        }
+        if(skillUses.alchemy > 0 || isGameOver) return;
+        let revealed = [];
+        flippedStates.forEach((f, i) => { if(f && cardsData[i]!==0) revealed.push(i); });
+        if(revealed.length === 0) { alert("场上没有任何翻开的数字明牌供炼金转换。"); return; }
+        let idx = revealed[0];
+        cardsData[idx] = 100;
+        document.getElementById(`front-text-${idx}`).innerText = 100;
+        calculateActualMax();
         skillUses.alchemy++;
         document.getElementById('skillAlchemyBtn').disabled = true;
-
-        cardsData[selectedIndex] = 100; 
-        document.getElementById(`front-text-${selectedIndex}`).innerText = "100";
-        
-        if (currentMode === 'mirror') {
-            let mirIdx = cardsData.length - 1 - selectedIndex;
-            cardsData[mirIdx] = 100;
-            let mFront = document.getElementById(`front-text-${mirIdx}`);
-            if (mFront) mFront.innerText = "100";
-        }
-
-        calculateActualMax();
-        alert("🧪 分子序重构！您成功将目标明牌点数重熔并修改为 [100点] 能级。");
+        updatePotentialScore();
     }
 
     function useSkillHacker() {
-        if(isGameOver || skillUses.hacker > 0) return;
+        if(skillUses.hacker > 0 || isGameOver) return;
+        flippedCount = 0;
+        document.getElementById('panelFlipped').innerText = 0;
         skillUses.hacker++;
         document.getElementById('skillHackerBtn').disabled = true;
-
-        flippedCount = 0;
-        if(currentMode === 'blind') {
-            let limit = 3 + talents.blindExtender.lv;
-            document.getElementById('flipLimiterBox').innerHTML = `禁域阈值: <span id="panelFlipped">0</span> / ${limit}`;
-        } else {
-            document.getElementById('panelFlipped').innerText = "0";
-        }
         updatePotentialScore();
-        alert("💻 黑客协议劫持：本局内翻牌引发的阈值与能耗数据被完美清空归零。");
     }
 
     function useSkillFreeze() {
-        if(isGameOver || skillUses.freeze > 0) return;
-        if(currentMode !== 'time' && currentMode !== 'quantum') {
-            alert("该时空冻结技能仅适用于【混沌时空】或【量子迷雾】模式！");
-            return;
-        }
+        if(skillUses.freeze > 0 || isGameOver) return;
+        isTimeFrozen = true;
         skillUses.freeze++;
         document.getElementById('skillFreezeBtn').disabled = true;
-
-        if(currentMode === 'time') timeModeOpCount = -1; 
-        alert("❄️ 时空冻结力场张开：下一部操作将绝对免疫剧变扰动与洗牌危机进度。");
+        document.getElementById('gameMsg').innerText = "❄️ [时空冻结]：下一发动作绝对不触发任何位面环境反噬连锁。";
     }
 
     function useSkillExchange() {
-        if(isGameOver || skillUses.exchange > 0) return;
+        if(skillUses.exchange > 0 || isGameOver) return;
+        let hidden = [];
+        cardsData.forEach((v, i) => { if(!flippedStates[i]) hidden.push(i); });
+        if(hidden.length < 2) return;
+        let i1 = hidden[0]; let i2 = hidden[1];
+        let t = cardsData[i1]; cardsData[i1] = cardsData[i2]; cardsData[i2] = t;
         
-        let p1 = prompt("请输入您想调换的第一张卡牌序号 (从 0 到 " + (cardsData.length-1) + "):");
-        let p2 = prompt("请输入您想调换的第二张卡牌序号 (从 0 到 " + (cardsData.length-1) + "):");
+        let tDom = document.getElementById(`front-text-${i1}`).innerText;
+        document.getElementById(`front-text-${i1}`).innerText = document.getElementById(`front-text-${i2}`).innerText;
+        document.getElementById(`front-text-${i2}`).innerText = tDom;
         
-        let idx1 = parseInt(p1); let idx2 = parseInt(p2);
-        if(isNaN(idx1) || isNaN(idx2) || idx1 < 0 || idx1 >= cardsData.length || idx2 < 0 || idx2 >= cardsData.length) {
-            alert("输入编码超出本位面范围，对调操作自动失效。");
-            return;
-        }
-        
-        if(document.getElementById(`card-${idx1}`).classList.contains('flipped') || document.getElementById(`card-${idx2}`).classList.contains('flipped')) {
-            alert("对调纠缠指令仅能在两个尚未翻开的暗面晶核间起效！");
-            return;
-        }
-
-        skillUses.exchange++;
-        document.getElementById('skillExchangeBtn').disabled = true;
-
-        let t = cardsData[idx1]; cardsData[idx1] = cardsData[idx2]; cardsData[idx2] = t;
-        
-        document.getElementById(`front-text-${idx1}`).innerText = cardsData[idx1] === 0 ? '💣' : cardsData[idx1];
-        document.getElementById(`front-text-${idx2}`).innerText = cardsData[idx2] === 0 ? '💣' : cardsData[idx2];
-        
-        let tmpS = scannedStates[idx1]; scannedStates[idx1] = scannedStates[idx2]; scannedStates[idx2] = tmpS;
-        let tmpL = luckyStarIndexes[idx1]; luckyStarIndexes[idx1] = luckyStarIndexes[idx2]; luckyStarIndexes[idx2] = tmpL;
+        // 修正雷索引映射
+        let newBombs = [];
+        cardsData.forEach((v, i) => { if(v===0) newBombs.push(i); });
+        bombIndexes = newBombs;
 
         calculateActualMax();
-        updateCardBackMarkings();
-        alert(`🔄 纠缠成功：第 ${idx1} 号暗牌与第 ${idx2} 号暗牌实体被成功对调位置。`);
+        skillUses.exchange++;
+        document.getElementById('skillExchangeBtn').disabled = true;
     }
 
     function useSkillPurify() {
-        if(isGameOver || skillUses.purify > 0 || selectedIndex === -1) return;
-        if(document.getElementById(`card-${selectedIndex}`).classList.contains('flipped')) {
-            alert("请选择处于暗面的卡牌芯片注入净化源！");
-            return;
+        if(skillUses.purify > 0 || isGameOver) return;
+        let hidden = [];
+        cardsData.forEach((v, i) => { if(!flippedStates[i]) hidden.push(i); });
+        if(hidden.length === 0) return;
+        let lucky = hidden[Math.floor(Math.random()*hidden.length)];
+        if(cardsData[lucky] === 0) {
+            cardsData[lucky] = 1;
+            document.getElementById(`front-text-${lucky}`).innerText = 1;
+            bombIndexes = bombIndexes.filter(b => b !== lucky);
+            calculateActualMax();
+            alert("虚空高能解构成功！一个危险地雷已被净化瓦解为点数 1。");
+        } else {
+            alert("选中的暗牌内部非常纯净，没有发现炸弹。");
         }
         skillUses.purify++;
         document.getElementById('skillPurifyBtn').disabled = true;
-
-        if (cardsData[selectedIndex] === 0) {
-            cardsData[selectedIndex] = 1; 
-            document.getElementById(`front-text-${selectedIndex}`).innerText = "1";
-            bombIndexes = bombIndexes.filter(i => i !== selectedIndex);
-            
-            if (currentMode === 'mirror') {
-                let mirIdx = cardsData.length - 1 - selectedIndex;
-                cardsData[mirIdx] = 1;
-                let mFront = document.getElementById(`front-text-${mirIdx}`);
-                if(mFront) mFront.innerText = "1";
-                bombIndexes = bombIndexes.filter(i => i !== mirIdx);
-            }
-
-            calculateActualMax();
-            alert("🧼 解构净化极光：成功滤除该暗牌内的爆破毒素，将其软化改写为 [数字点数 1]！");
-        } else {
-            alert("🧼 解构净化完毕：该卡牌晶核处于正常稳态数值状态，未检测到地雷毒素。");
-        }
     }
 
     function useSkillDivination() {
-        if(isGameOver || skillUses.divination > 0 || selectedIndex === -1) return;
+        if(skillUses.divination > 0 || isGameOver) return;
+        if(selectedIndex === -1) { alert("请先在场上单击选中一张你想卜算的维度卡牌。"); return; }
+        let currentVal = cardsData[selectedIndex];
+        if(currentVal === 0) {
+            alert("🔮 因果断言：此牌大凶，其内包裹着灭世雷霆！");
+        } else if(currentVal === actualMaxVal || (currentMode==='slit' && currentVal === actualMaxVal)) {
+            alert("🔮 因果断言：此牌正统！正是本位面绝对最大数值极值卡！");
+        } else {
+            alert(`🔮 因果断言：非极大值。该卡能级为 ${currentVal}，距离当前最高维度价值还差一段虚空距离。`);
+        }
         skillUses.divination++;
         document.getElementById('skillDivinationBtn').disabled = true;
-
-        let isTargetMax = (cardsData[selectedIndex] === actualMaxVal);
-        if(isTargetMax) {
-            alert("🔮 【命运高维占卜】：高维观测回响！当前锁定的目标卡牌[确定]为本维度的有效极值最大值！");
-        } else {
-            alert("🔮 【命运高维占卜】：高维观测回响！此牌内的能量极其微弱，[并非]本维度真正的有效极值最高点数。");
-        }
     }
 
     function declareMax() {
-        if (isGameOver || selectedIndex === -1) return;
-        isGameOver = true;
-        revealAllCards();
-
-        let declaredVal = cardsData[selectedIndex];
-        let diff = Math.abs(declaredVal - actualMaxVal);
-        let allowedDiff = talents.exactExecute.lv === 1 ? 2 : (talents.exactExecute.lv === 2 ? 4 : 0);
-
-        if (declaredVal === 0) {
-            handleLose("☠️ 灾难级猜想！您强行锁定了【爆破雷区】，引发宇宙级能量坍塌大爆炸！");
-        } else if (diff <= allowedDiff) {
-            let bonusTxt = diff > 0 ? ` (触发【阈值精准斩杀】容错修正成功)` : "";
-            handleWin(`🎉 完美锁定极值核心！本维度真极值为 ${actualMaxVal}，您选择的是 ${declaredVal}。${bonusTxt}`);
-        } else {
-            handleLose(`❌ 维度极值判定不匹配。当前有效真极值为 ${actualMaxVal}，而您错误锁定的目标数值为 ${declaredVal}。`);
-        }
-    }
-
-    function revealAllCards() {
-        cardsData.forEach((num, i) => {
-            const card = document.getElementById(`card-${i}`);
-            if(card) {
-                card.classList.add('flipped');
-                if (num === 0) card.classList.add('is-bomb');
-                else if (num === actualMaxVal && currentMode !== 'balance') card.classList.add('is-max');
-            }
+        if(selectedIndex === -1 || isGameOver) return;
+        
+        // 全场翻开看底牌
+        cardsData.forEach((num, idx) => {
+            document.getElementById(`card-${idx}`).classList.add('flipped');
+            if(num === actualMaxVal) document.getElementById(`card-${idx}`).classList.add('is-max');
+            if(num === 0) document.getElementById(`card-${idx}`).classList.add('is-bomb');
         });
-    }
 
-    function handleWin(reason) {
-        let earned = parseInt(document.getElementById('potentialScore').innerText);
-        accumulatedTotalScore += earned;
-        document.getElementById('totalScoreTxt').innerText = accumulatedTotalScore;
+        let chosenValue = cardsData[selectedIndex];
+        let diff = Math.abs(chosenValue - actualMaxVal);
+        let allowedTolerance = talents.exactExecute.lv === 1 ? 2 : talents.exactExecute.lv === 2 ? 4 : 0;
 
-        const msgBox = document.getElementById('gameMsg');
-        msgBox.innerText = reason + ` 💡 本关获得总星穹积分: +${earned}`;
-        msgBox.style.color = "#059669";
-
-        document.getElementById('gambleBtn').style.display = "none";
-        const nextBtn = document.getElementById('nextLevelBtn');
-        nextBtn.style.display = "block";
-        nextBtn.innerText = `🌌 位面跨越：迁往下一星域维度空间 (第 ${currentLevel + 1} 关)`;
-    }
-
-    function handleLose(reason) {
-        const msgBox = document.getElementById('gameMsg');
-        msgBox.style.color = "#dc2626";
-
-        if (talents.failInsurance.lv > 0) {
-            talents.failInsurance.lv--;
-            msgBox.innerText = reason + " 🛡️ 已触发【逆境对冲基金】：免除归零惩罚，数据得以完美保全。";
-            document.getElementById('gambleBtn').style.display = "none";
-            const nextBtn = document.getElementById('nextLevelBtn');
-            nextBtn.style.display = "block";
-            nextBtn.innerText = `🔄 重构该时空节点进行再次挑战`;
-            return;
+        if (chosenValue === 0) {
+            endGame(false, "无法直视的败北！您锁定了一张虚无炸弹卡，能级当场消融湮灭！");
+        } else if (chosenValue === actualMaxVal || diff <= allowedTolerance) {
+            let finalGain = parseInt(document.getElementById('potentialScore').innerText);
+            accumulatedTotalScore += finalGain;
+            endGame(true, `🎉 惊人的直觉！锁定真值成功。本关狂揽 +${finalGain} 绩点能级积分！`);
+        } else {
+            endGame(false, `维度偏振失准！您锁定的数字是 ${chosenValue}，而多维空间的真实最大目标值是 ${actualMaxVal}。`);
         }
+    }
 
-        msgBox.innerText = reason + " 📉 遭遇不可逆虚空降维打击，探险记录重置回归起始点。";
-        currentLevel = 1;
-        accumulatedTotalScore = 0;
+    function endGame(isWin, resultMessage) {
+        isGameOver = true;
+        const msgBox = document.getElementById('gameMsg');
+        msgBox.innerText = resultMessage;
+        msgBox.style.color = isWin ? "#059669" : "#dc2626";
 
         document.getElementById('gambleBtn').style.display = "none";
         const nextBtn = document.getElementById('nextLevelBtn');
         nextBtn.style.display = "block";
-        nextBtn.innerText = `重新开启位面传承 (第 1 关)`;
+
+        if(isWin) {
+            nextBtn.innerText = "➡️ 汲取本源成功，迁跃至更高的数理位面空间";
+        } else {
+            if(talents.failInsurance.lv > 0) {
+                talents.failInsurance.lv--;
+                nextBtn.innerText = `🛡️ 触发[对冲基金]免除死亡惩罚！重新挑战本维度关卡`;
+            } else {
+                currentLevel = 1;
+                accumulatedTotalScore = 0;
+                nextBtn.innerText = "❌ 跃迁坍塌！数据全损毁，重启系统回到第 1 维度空间";
+            }
+        }
     }
 
     function nextLevelAction() {
-        const nextBtn = document.getElementById('nextLevelBtn');
-        if (nextBtn.innerText.includes("迁往下一星域")) {
+        if(document.getElementById('gameMsg').innerText.includes("🎉")) {
             currentLevel++;
-            if (currentLevel % 5 === 1) { 
-                showRogueRewardModal(); 
-                return;
-            }
-        }
-        initGame();
-    }
-
-    function renderTalentTags() {
-        const container = document.getElementById('talentTagsContainer');
-        container.innerHTML = '';
-        for (let key in talents) {
-            let t = talents[key];
-            if (t.lv > 0) {
-                const tag = document.createElement('span');
-                tag.className = 'talent-tag';
-                tag.innerText = `🔹 ${t.name} Lv.${t.lv}`;
-                container.appendChild(tag);
-            }
+            openRogueTreasure();
+        } else {
+            initGame();
         }
     }
 
-    function showRogueRewardModal() {
+    // 随机抽取强化被动
+    function openRogueTreasure() {
         const overlay = document.getElementById('rogueOverlay');
         const box = document.getElementById('rogueChoicesBox');
         box.innerHTML = '';
+        
+        let allKeys = Object.keys(talents);
+        let selectedTalents = [];
+        
+        while(selectedTalents.length < 3 && allKeys.length > 0) {
+            let randKey = allKeys.splice(Math.floor(Math.random()*allKeys.length), 1)[0];
+            let tObj = talents[randKey];
+            if(tObj.lv < tObj.maxY) {
+                selectedTalents.push({ key: randKey, ...tObj });
+            }
+        }
 
-        let allKeys = Object.keys(talents).filter(k => talents[k].lv < talents[k].maxY);
-        if (allKeys.length === 0) {
+        if(selectedTalents.length === 0) {
             initGame();
             return;
         }
 
-        let shuffled = allKeys.sort(() => 0.5 - Math.random());
-        let picks = shuffled.slice(0, Math.min(3, shuffled.length));
-
-        picks.forEach(key => {
-            let t = talents[key];
-            let nextLv = t.lv + 1;
-            let btn = document.createElement('button');
+        selectedTalents.forEach(t => {
+            const btn = document.createElement('button');
             btn.className = 'choice-btn';
-            btn.innerHTML = `<h4>🧬 战术融合：${t.name} (升级至阶级 Lv.${nextLv})</h4>
-                             <p>芯片属性效果：${t.desc[nextLv - 1]}</p>`;
             btn.onclick = () => {
-                t.lv = nextLv;
+                talents[t.key].lv++;
                 overlay.style.display = 'none';
                 initGame();
             };
+            btn.innerHTML = `<h4>🧬 【${t.name}】 (等级 ${t.lv + 1}/${t.maxY})</h4><p>${t.desc[t.lv]}</p>`;
             box.appendChild(btn);
         });
 
         overlay.style.display = 'flex';
     }
 
-    window.onload = function() {
+    function renderTalentTags() {
+        const container = document.getElementById('talentTagsContainer');
+        container.innerHTML = '';
+        for(let k in talents) {
+            if(talents[k].lv > 0) {
+                const span = document.createElement('span');
+                span.className = 'talent-tag';
+                span.innerText = `▪️ ${talents[k].name} Lv.${talents[k].lv}`;
+                container.appendChild(span);
+            }
+        }
+    }
+
+    // 启动系统
+    window.onload = () => {
         initGame();
     };
 </script>
