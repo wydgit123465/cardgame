@@ -3,615 +3,864 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>最大卡片猜想王 v4.0 (硬核博弈浅色版)</title>
+    <title>最大卡片猜想王 v7.1 (动态坍塌版)</title>
     <style>
         :root {
-            --bg-main: #f4f6f9;
+            --bg-main: #f1f5f9;
             --bg-container: #ffffff;
-            --text-main: #1e293b;
+            --text-main: #0f172a;
             --text-muted: #64748b;
             
             --primary: #3b82f6;
             --primary-hover: #2563eb;
             --success: #10b981;
-            --success-hover: #059669;
             --danger: #ef4444;
             --warning: #f59e0b;
+            --purple: #8b5cf6;
+            --dark: #1e293b;
             
-            --card-back-grad: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            --card-back-grad: linear-gradient(135deg, #475569 0%, #1e293b 100%);
             --card-front-bg: #ffffff;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             background-color: var(--bg-main);
             color: var(--text-main);
             margin: 0;
-            padding: 40px 20px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
             box-sizing: border-box;
-            transition: background-color 0.3s;
         }
 
         .container {
-            max-width: 840px;
+            max-width: 1000px;
             width: 100%;
             background: var(--bg-container);
-            padding: 35px;
+            padding: 25px;
             border-radius: 24px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 16px -6px rgba(0, 0, 0, 0.05), 0 0 1px 1px rgba(0,0,0,0.02);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
         }
 
-        h1 {
-            text-align: center;
-            color: var(--text-main);
-            font-size: 2.2rem;
-            font-weight: 800;
-            margin-top: 0;
-            margin-bottom: 8px;
-            letter-spacing: -0.5px;
-        }
+        h1 { text-align: center; font-size: 1.8rem; font-weight: 800; margin: 0 0 5px 0; }
+        h1 small { font-size: 0.55em; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; padding: 2px 8px; border-radius: 6px; vertical-align: middle; }
+        .subtitle { text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; }
 
-        h1 small {
-            font-size: 0.55em;
-            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 6px;
-            margin-left: 5px;
-            vertical-align: middle;
-            font-weight: 600;
-        }
+        .panel { background: #f8fafc; padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        .section-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; color: #334155; display: flex; align-items: center; gap: 6px; }
 
-        .subtitle {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            margin-bottom: 30px;
-            line-height: 1.5;
+        .mode-selector { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 10px; 
+            margin-bottom: 5px; 
         }
+        .mode-card { background: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 10px; cursor: pointer; transition: all 0.2s; }
+        .mode-card:hover { border-color: #cbd5e1; }
+        .mode-card.active { border-color: var(--primary); background: #eff6ff; }
+        .mode-card h3 { margin: 0 0 3px 0; font-size: 0.9rem; display: flex; align-items: center; gap: 4px; }
+        .mode-card p { margin: 0; font-size: 0.75rem; color: var(--text-muted); line-height: 1.3; }
 
-        /* 配置区域优化 */
-        .settings {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 16px;
-            margin-bottom: 24px;
-            align-items: center;
-            justify-content: space-between;
-            border: 1px solid #e2e8f0;
+        .stage-banner { 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+            color: #ffffff; 
+            padding: 15px 25px; 
+            border-radius: 16px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 15px; 
         }
+        .stage-stats { display: flex; gap: 30px; }
+        .stat-value { font-size: 1.6rem; font-weight: 900; color: #34d399; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .stat-label { font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; }
 
-        .setting-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            flex: 1;
-        }
+        .scoreboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; margin-bottom: 15px; font-weight: 600; font-size: 0.85rem; }
+        .score-box { background: #f1f5f9; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0; }
 
-        .setting-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.95rem;
-            font-weight: 500;
-            color: var(--text-main);
-        }
+        .skills-section { background: #f0fdf4; padding: 15px; border-radius: 16px; border: 1px solid #bbf7d0; margin-bottom: 15px; }
+        .talent-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+        .talent-tag { background: #e2e8f0; color: #334155; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; border: 1px solid #cbd5e1; }
 
-        .setting-item input {
-            width: 75px;
-            padding: 8px 12px;
-            border: 1px solid #cbd5e1;
-            background: #ffffff;
-            color: var(--text-main);
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 0.95rem;
-            outline: none;
-            transition: all 0.2s;
-        }
+        .rogue-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 999; display: none; }
+        .rogue-modal { background: #ffffff; padding: 25px; border-radius: 24px; max-width: 600px; width: 90%; text-align: center; }
+        .rogue-choices { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        .choice-btn { background: #f8fafc; border: 2px solid #e2e8f0; padding: 12px; border-radius: 12px; text-align: left; cursor: pointer; transition: all 0.2s; }
+        .choice-btn:hover { border-color: var(--success); background: #f0fdf4; transform: translateY(-2px); }
+        .choice-btn h4 { margin: 0 0 3px 0; color: #0f172a; font-size: 0.95rem; }
+        .choice-btn p { margin: 0; color: #64748b; font-size: 0.78rem; }
 
-        .setting-item input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(59, 131, 246, 0.15);
-        }
+        .action-zone { text-align: center; margin-bottom: 20px; background: #fffbeb; padding: 15px; border-radius: 16px; border: 1px dashed #fcd34d; }
+        .msg { font-size: 0.9rem; font-weight: 600; margin-bottom: 10px; min-height: 22px; color: #d97706; line-height: 1.4; }
 
-        /* 记分板优化 */
-        .scoreboard {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 24px;
-            font-size: 1.05rem;
-            font-weight: 600;
-            background: #f1f5f9;
-            padding: 16px;
-            border-radius: 14px;
-            border: 1px solid #e2e8f0;
-        }
+        button { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.15s ease; }
+        button:active { transform: scale(0.97); }
+        button:disabled { background: #cbd5e1 !important; color: #94a3b8 !important; cursor: not-allowed; transform: none !important; }
+        .btn-purple { background: var(--purple); color: white; }
+        .btn-purple:hover { background: #7c3aed; }
+        .btn-skill { background: #ffffff; border: 1px solid #bbf7d0; color: #166534; font-size: 0.8rem; margin-right: 4px; margin-bottom: 4px; }
+        .btn-skill:hover { background: #dcfce7; }
+        .btn-action { background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: white; font-size: 1rem; padding: 12px 20px; width: 100%; border-radius: 12px; }
 
-        .score-box {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+        .cards-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 15px; }
+        .card { width: 72px; height: 102px; perspective: 1000px; cursor: pointer; }
+        .card-inner { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.4s ease; transform-style: preserve-3d; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 10px; }
+        .card.flipped .card-inner { transform: rotateY(180deg); }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; border-radius: 10px; box-sizing: border-box; border: 1px solid rgba(0,0,0,0.06); }
+        .card-back { background: var(--card-back-grad); color: #ffffff; padding: 5px; text-align: center; }
+        .card-back span { font-size: 1.1rem; line-height: 1.2; word-break: break-all; }
+        .card-back .tip { font-size: 0.5rem; color: #94a3b8; margin-top: 2px; }
+        .card-front { background-color: var(--card-front-bg); color: var(--text-main); font-size: 1.2rem; transform: rotateY(180deg); }
 
-        .high-score { color: #b45309; }
-
-        /* 操作区域优化 */
-        .action-zone {
-            text-align: center;
-            margin-bottom: 30px;
-            background: #fffbeb;
-            padding: 20px;
-            border-radius: 16px;
-            border: 1px dashed #fcd34d;
-        }
-
-        .msg {
-            font-size: 1rem;
-            font-weight: 500;
-            margin-bottom: 16px;
-            min-height: 24px;
-            line-height: 1.5;
-            color: #d97706;
-            transition: color 0.2s;
-        }
-
-        /* 按钮统一样式 */
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.95rem;
-            transition: all 0.2s ease-in-out;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-        }
-
-        button:active {
-            transform: scale(0.98);
-        }
-
-        .btn-primary { 
-            background-color: var(--primary); 
-            color: white; 
-        }
-        .btn-primary:hover { 
-            background-color: var(--primary-hover); 
-            box-shadow: 0 4px 12px rgba(59, 131, 246, 0.2);
-        }
-        
-        .btn-success { 
-            background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); 
-            color: white; 
-            font-size: 1.05rem; 
-            padding: 14px 28px; 
-            width: 100%; 
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
-        }
-        .btn-success:hover { 
-            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); 
-            box-shadow: 0 6px 20px rgba(234, 88, 12, 0.3);
-        }
-        .btn-success:disabled { 
-            background: #cbd5e1 !important; 
-            color: #94a3b8; 
-            cursor: not-allowed; 
-            box-shadow: none !important;
-            transform: none !important;
-        }
-
-        /* 卡片容器与扑克牌优化 */
-        .cards-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            justify-content: center;
-            margin-top: 25px;
-        }
-
-        .card {
-            width: 80px;
-            height: 115px;
-            perspective: 1000px;
-            cursor: pointer;
-        }
-
-        .card-inner {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            text-align: center;
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-style: preserve-3d;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            border-radius: 12px;
-        }
-
-        .card.flipped .card-inner {
-            transform: rotateY(180deg);
-        }
-
-        .card-front, .card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            border-radius: 12px;
-            box-sizing: border-box;
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-
-        /* 卡片背面设计（高级科技感纹理蓝） */
-        .card-back {
-            background: var(--card-back-grad);
-            color: #ffffff;
-        }
-        
-        .card-back span {
-            font-size: 1.8rem;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .card-back .tip { 
-            font-size: 0.65rem; 
-            color: rgba(255, 255, 255, 0.7); 
-            margin-top: 6px; 
-            font-weight: 400;
-        }
-
-        /* 卡片正面设计 */
-        .card-front {
-            background-color: var(--card-front-bg);
-            color: var(--text-main);
-            font-size: 1.6rem;
-            transform: rotateY(180deg);
-        }
-
-        /* 选中状态高亮 */
-        .card.selected:not(.flipped) .card-inner {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 20px rgba(234, 88, 12, 0.25);
-        }
-        .card.selected:not(.flipped) .card-back { 
-            border: 3px solid #ea580c; 
-        }
-        
-        .card.flipped.selected .card-front { 
-            border: 3px solid #f59e0b; 
-            background-color: #fef3c7; 
-        }
-        
-        /* 游戏结果结算高亮效果（重磅视觉） */
-        /* 真正的大赢家牌：翡翠绿渐变发光 */
-        .card.is-max .card-front { 
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; 
-            color: #ffffff !important; 
-            box-shadow: 0 0 25px rgba(16, 185, 129, 0.6) !important;
-            border: none;
-        }
-        /* 炸弹牌：烈焰红渐变发光 */
-        .card.is-bomb .card-front { 
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important; 
-            color: #ffffff !important; 
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4) !important;
-            border: none;
-        }
-        /* 被干掉的牌：优雅的灰色被禁状态 */
-        .card.is-killed .card-front { 
-            background-color: #e2e8f0 !important; 
-            color: #94a3b8 !important; 
-            text-decoration: line-through; 
-            box-shadow: none !important;
-            border: 1px dashed #cbd5e1;
-        }
-
-        @media (max-width: 640px) {
-            .settings { flex-direction: column; align-items: stretch; }
-            .setting-group { flex-direction: column; }
-            .setting-item { justify-content: space-between; }
-            .btn-primary { width: 100%; }
-        }
+        .card.selected:not(.flipped) .card-inner { transform: translateY(-5px); }
+        .card.selected:not(.flipped) .card-back { border: 3px solid #ea580c; }
+        .card.flipped.selected .card-front { border: 3px solid #f59e0b; background-color: #fef3c7; }
+        .card.is-max .card-front { background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; color: white !important; border: none; }
+        .card.is-bomb .card-front { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important; color: white !important; border: none; }
+        .card.is-killed .card-front { background-color: #cbd5e1 !important; color: #94a3b8 !important; text-decoration: line-through !important; border: 1px dashed #94a3b8;}
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>最大卡片猜想王 🧠 <small>v4.0 绝境博弈版</small></h1>
-    <div class="subtitle">⚠️ 警告：包含【致命炸弹牌】与【迷雾随机上限】。盲猜暗牌失败将倒扣最高分！</div>
-
-    <div class="settings">
-        <div class="setting-group">
-            <div class="setting-item">
-                <label>预计基准范围: 1 至 </label>
-                <input type="number" id="maxNumInput" value="100">
-                <span style="color: var(--text-muted); font-size: 0.8rem;">(实际最大值含 ±15% 迷雾扰动)</span>
+    <div class="stage-banner">
+        <div class="stage-stats">
+            <div>
+                <div class="stat-label">冒险进度</div>
+                <div class="stat-value" id="currentLevelTxt">1</div>
             </div>
-            <div class="setting-item">
-                <label>抽取卡片数:</label>
-                <input type="number" id="cardCount" value="10" min="4">
+            <div>
+                <div class="stat-label">当前累积总积分</div>
+                <div class="stat-value" id="totalScoreTxt" style="color:#60a5fa;">0</div>
             </div>
         </div>
-        <button class="btn-primary" onclick="initGame()">生成深渊对局</button>
+        <div style="text-align: right;">
+            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">COGNITION MASTER</div>
+            <div style="font-weight: 800; font-size: 1.1rem; color: #f43f5e;">混沌肉鸽无尽版</div>
+        </div>
+    </div>
+
+    <!-- 8大模式选择区 -->
+    <div class="panel">
+        <div class="section-title">🔮 选择切换星域维度模式（关卡和积分保留）：</div>
+        <div class="mode-selector">
+            <div class="mode-card active" id="mode-classic" onclick="switchMode('classic')">
+                <h3>☠️ 经典深渊</h3>
+                <p>1张炸弹。炸弹会吞噬其左右相邻的最大值。</p>
+            </div>
+            <div class="mode-card" id="mode-rage" onclick="switchMode('rage')">
+                <h3>💥 狂暴红海</h3>
+                <p>2张炸弹。炸弹一旦翻开，左右两侧卡牌全部湮灭。</p>
+            </div>
+            <div class="mode-card" id="mode-quantum" onclick="switchMode('quantum')">
+                <h3>🌌 量子迷雾</h3>
+                <p>每次翻牌，暗牌数值震荡±1。雷达数据随之【变异失真】，天眼奇偶反转！</p>
+            </div>
+            <div class="mode-card" id="mode-blind" onclick="switchMode('blind')">
+                <h3>⏳ 盲区禁域</h3>
+                <p>限制翻牌数！单局【最多只能翻开3张牌】，其余锁死。</p>
+            </div>
+            <div class="mode-card" id="mode-balance" onclick="switchMode('balance')">
+                <h3>⚖️ 命运天平</h3>
+                <p>无炸弹。卡牌分左右半区，有效最大值=左最大+右最大。</p>
+            </div>
+            <div class="mode-card" id="mode-mirror" onclick="switchMode('mirror')">
+                <h3>🔄 镜像双生</h3>
+                <p>卡牌呈双生镜像。翻开一张，对应位置的卡牌同步翻开。</p>
+            </div>
+            <div class="mode-card" id="mode-greed" onclick="switchMode('greed')">
+                <h3>💰 贪婪诅咒</h3>
+                <p>数字极大。但每翻开一张明牌，本关通关分直接扣减20分。</p>
+            </div>
+            <div class="mode-card" id="mode-time" onclick="switchMode('time')">
+                <h3>🕒 混沌时空</h3>
+                <p>每操作3次全场乱序洗牌！洗牌后，以往所有的【雷达/精算】标记永久失效！</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="skills-section">
+        <div class="section-title" style="color: #166534;">🎒 战术指令背包 & 核心肉鸽被动：</div>
+        <div style="margin-bottom: 5px;">
+            <button id="skillScanBtn" class="btn-skill" onclick="useSkillScan()">👁️ 雷达探测 (<span id="scanUsesLeft">1</span>)</button>
+            <button id="skillDefuseBtn" class="btn-skill" onclick="useSkillDefuse()">🛡️ 强行拆弹 (<span id="defuseUsesLeft">1</span>)</button>
+            <button id="skillReturnBtn" class="btn-skill" onclick="useSkillReturn()" style="display:none;">↩️ 战术盖牌</button>
+        </div>
+        <div class="talent-tags" id="talentTagsContainer"></div>
     </div>
 
     <div class="scoreboard">
-        <div class="score-box">潜在结算得分: <span id="potentialScore" style="color: #e67e22;">0</span></div>
-        <div class="score-box high-score">🌟 历史最高分: <span id="highScore">0</span></div>
+        <div class="score-box" style="color: #3b82f6;">数值范围: 1 至 <span id="panelRange">100</span></div>
+        <div class="score-box" style="color: #8b5cf6;">卡牌总数: <span id="panelCount">10</span></div>
+        <div class="score-box" style="color: #ef4444;" id="flipLimiterBox">已翻牌损耗: <span id="panelFlipped">0</span></div>
+        <div class="score-box" style="color: #10b981;">本关预期分: <span id="potentialScore">0</span></div>
     </div>
 
     <div class="action-zone">
-        <div id="gameMsg" class="msg">请生成新对局...</div>
-        <button id="gambleBtn" class="btn-success" onclick="declareMax()" disabled>🔥 锁定选中目标：断言它是有效最大值！</button>
+        <div id="gameMsg" class="msg">正在初始化量子晶核...</div>
+        <button id="gambleBtn" class="btn-action" onclick="declareMax()" disabled>🔥 锁定目标：确认它是当前维度的有效最大值！</button>
+        <button id="nextLevelBtn" class="btn-purple" onclick="nextLevelAction()" style="display:none; width:100%; padding:12px; font-size:1.05rem;"></button>
     </div>
 
     <div id="cardsContainer" class="cards-container"></div>
 </div>
 
-<script>
-    let cardsData = [];       
-    let flippedCount = 0;     
-    let selectedIndex = -1;   
-    let isGameOver = false;
-    let bombIndex = -1;       // 炸弹牌的索引
-    let actualMaxVal = -1;    // 经判定的最终有效最大值
-    let highScore = parseInt(localStorage.getItem('maxCardHighScoreV4')) || 0;
+<div class="rogue-overlay" id="rogueOverlay">
+    <div class="rogue-modal">
+        <h2 style="color:#10b981; margin:0 0 5px 0;">🎉 跨越5关节点，量子宝藏爆发！</h2>
+        <p style="color:#64748b; font-size:0.85rem;">请从下方随机生成的 3 项战术天赋中选择 1 项进行融合绑定：</p>
+        <div class="rogue-choices" id="rogueChoicesBox"></div>
+    </div>
+</div>
 
-    document.getElementById('highScore').innerText = highScore;
+<script>
+    let currentLevel = 1;
+    let accumulatedTotalScore = 0; 
+    let baseRangeMax = 100;
+    let baseCardCount = 10;
+    let currentMode = 'classic';
+
+    let cardsData = [];
+    let flippedCount = 0;
+    let selectedIndex = -1;
+    let isGameOver = false;
+    let bombIndexes = [];
+    let actualMaxVal = -1;
+    let killedMaxVals = [];
+    
+    // 跟踪技能侦测状态，防止动态模式误导玩家
+    let scannedStates = {}; // 记录格式: { index: { type: 'radar', originalValue: 12, isStale: false } }
+    let luckyStarIndexes = {}; // 记录格式: { index: '奇'/'偶' }
+    let timeModeOpCount = 0; 
+    let baseMapBackup = ""; // 精算大师信息缓存
+
+    let scanTotal = 1;   let scanUsed = 0;
+    let defuseTotal = 1; let defuseUsed = 0;
+    let returnTotal = 0; let returnUsed = 0;
+
+    let talents = {
+        scanRadar: { name: "探查雷达", lv: 0, maxY: 3, desc: ["探测器次数上限 +1", "探测器次数上限 +2", "探测器次数上限 +3"] },
+        defuseArmor: { name: "拆弹护甲", lv: 0, maxY: 2, desc: ["单局强行拆弹可以多容错使用 1 次", "单局强行拆弹可以多容错使用 2 次"] },
+        quantumMuffle: { name: "观测对冲", lv: 0, maxY: 2, desc: ["量子波动时有 40% 概率失效不引发变动", "量子波动时有 80% 概率失效不引发变动"] },
+        bombShield: { name: "排雷免死", lv: 0, maxY: 1, desc: ["踩到炸弹牌时，有 50% 概率使其直接废弃不引发惩罚"] },
+        luckyStar: { name: "幸运天眼", lv: 0, maxY: 3, desc: ["开局自动揭示 1 张暗牌的奇偶形态", "开局自动揭示 2 张暗牌的奇偶形态", "开局自动揭示 3 张暗牌的奇偶形态"] },
+        failInsurance: { name: "逆境保险", lv: 0, maxY: 3, desc: ["失败时免除惩罚、不重置为第1关和0分(可用1次)", "拥有 2 次免除机会", "拥有 3 次免除机会"] },
+        balanceScale: { name: "天平感知", lv: 0, maxY: 2, desc: ["开局直观获知前半段与后半段哪边数字总和庞大", "开局精确得知极值分布的大概象限"] },
+        exactExecute: { name: "精准斩杀", lv: 0, maxY: 2, desc: ["选择的数值与真实最大值相差 ≤2 时直接判定通关", "相差 ≤4 时直接判定通关"] },
+        intelReturn: { name: "战术盖牌", lv: 0, maxY: 2, desc: ["解锁战术盖牌，每局可以反悔把 1 张明牌盖回暗牌", "每局战术盖牌次数上限提高到 2 次"] },
+        kingInsider: { name: "王牌内幕", lv: 0, maxY: 1, desc: ["经典深渊下开局直接得知有效最大值是否已被吞噬"] },
+        chainChain: { name: "连锁闪电", lv: 0, maxY: 1, desc: ["镜像双生模式下，同步被翻开的镜像牌有 50% 概率不计入翻牌损耗"] },
+        blindExtender: { name: "禁域增容", lv: 0, maxY: 2, desc: ["盲区禁域模式的允许翻牌次数上限提高 1 次", "允许翻牌次数上限提高 2 次"] },
+        greedBuster: { name: "抗腐蚀性", lv: 0, maxY: 2, desc: ["贪婪诅咒下每翻一张牌的扣分惩罚降低为 10 分", "惩罚扣分降低为 5 分"] },
+        timeStabilizer: { name: "时空锚点", lv: 0, maxY: 1, desc: ["混沌时空模式下，触发随机洗牌所需的步数从 3 次提升到 5 次"] },
+        calculatorMath: { name: "精算大师", lv: 0, maxY: 1, desc: ["天平模式下，开局直接提示你左半区的最高数值是多少"] }
+    };
+
+    function switchMode(mode) {
+        if (!isGameOver && cardsData.length > 0 && !confirm("当前关卡博弈进行中，切换模式会重新生成本关，是否切换？")) return;
+        currentMode = mode;
+        document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+        document.getElementById(`mode-${mode}`).classList.add('active');
+        initGame();
+    }
 
     function initGame() {
-        const baseMax = parseInt(document.getElementById('maxNumInput').value);
-        const count = parseInt(document.getElementById('cardCount').value);
+        const runRange = baseRangeMax + (currentLevel - 1) * 10;
+        const runCount = Math.min(24, baseCardCount + (currentLevel - 1) * 1); 
 
-        if (isNaN(baseMax) || isNaN(count) || count < 4) {
-            alert("卡片数不能少于4张！");
-            return;
-        }
+        document.getElementById('currentLevelTxt').innerText = currentLevel;
+        document.getElementById('totalScoreTxt').innerText = accumulatedTotalScore;
+        document.getElementById('panelRange').innerText = runRange;
+        document.getElementById('panelCount').innerText = runCount;
 
-        // 机制1：数字迷雾
-        const fuzz = Math.floor((Math.random() * 2 - 1) * (baseMax * 0.15)); 
-        const currentMaxRange = baseMax + fuzz;
-
-        // 生成不重复池
-        const pool = [];
-        for (let i = 1; i <= currentMaxRange; i++) pool.push(i);
-        
-        // 洗牌抽取
-        cardsData = [];
-        for (let i = 0; i < count; i++) {
-            if(pool.length === 0) break;
-            const randomIndex = Math.floor(Math.random() * pool.length);
-            cardsData.push(pool.splice(randomIndex, 1)[0]);
-        }
-
-        // 机制2：致命炸弹牌
-        bombIndex = Math.floor(Math.random() * cardsData.length);
-        cardsData[bombIndex] = 0; 
-
-        // 核心逻辑计算：找出有效最大值
-        let tempMax = -1;
-        cardsData.forEach((num) => {
-            if (num > tempMax) tempMax = num;
-        });
-
-        // 判定炸弹相邻吞噬
-        let finalMax = tempMax;
-        const rawMaxIndex = cardsData.indexOf(tempMax);
-        if (Math.abs(rawMaxIndex - bombIndex) === 1) {
-            finalMax = -1;
-            cardsData.forEach((num, idx) => {
-                if (num > finalMax && num !== tempMax) finalMax = num;
-            });
-            actualMaxVal = finalMax; 
-            actualMaxVal.isKilled = tempMax; 
+        if(currentMode === 'blind') {
+            let limit = 3 + talents.blindExtender.lv;
+            document.getElementById('flipLimiterBox').innerHTML = `禁域阈值: <span id="panelFlipped">0</span> / ${limit}`;
+            document.getElementById('flipLimiterBox').style.color = "#ec4899";
         } else {
-            actualMaxVal = finalMax;
+            document.getElementById('flipLimiterBox').innerHTML = `已翻牌损耗: <span id="panelFlipped">0</span>`;
+            document.getElementById('flipLimiterBox').style.color = "#ef4444";
         }
 
-        // 重置状态
-        flippedCount = 0;
-        selectedIndex = -1;
-        isGameOver = false;
-        document.getElementById('gambleBtn').disabled = true;
-        
-        const msgBox = document.getElementById('gameMsg');
-        msgBox.innerText = "🔮 暗黑规则：双击牌面翻开。小心！若本局最大值与【0号炸弹牌】左右相邻，最大值将失效，由次大值接替！";
-        msgBox.style.color = "#d97706";
-        updatePotentialScore();
+        scanTotal = 1 + talents.scanRadar.lv;
+        defuseTotal = 1 + talents.defuseArmor.lv;
+        returnTotal = talents.intelReturn.lv;
+        scanUsed = 0; defuseUsed = 0; returnUsed = 0; timeModeOpCount = 0;
+        baseMapBackup = "";
 
+        document.getElementById('scanUsesLeft').innerText = scanTotal - scanUsed;
+        document.getElementById('defuseUsesLeft').innerText = defuseTotal - defuseUsed;
+        
+        const returnBtn = document.getElementById('skillReturnBtn');
+        returnBtn.style.display = returnTotal > 0 ? "inline-block" : "none";
+        if(returnTotal > 0) returnBtn.innerText = `↩️ 战术盖牌 (${returnTotal - returnUsed})`;
+
+        document.getElementById('skillScanBtn').disabled = false;
+        document.getElementById('skillDefuseBtn').disabled = false;
+        returnBtn.disabled = false;
+        document.getElementById('gambleBtn').disabled = true;
+        document.getElementById('gambleBtn').style.display = "block";
+        document.getElementById('nextLevelBtn').style.display = "none";
+
+        flippedCount = 0; selectedIndex = -1; isGameOver = false; bombIndexes = []; killedMaxVals = []; 
+        scannedStates = {}; luckyStarIndexes = {};
+
+        let fuzz = Math.floor((Math.random() * 2 - 1) * (runRange * 0.1));
+        let finalMaxRange = Math.max(40, runRange + fuzz);
+        if(currentMode === 'greed') finalMaxRange += 1000;
+
+        let pool = [];
+        for (let i = 1; i <= finalMaxRange; i++) pool.push(i);
+
+        cardsData = [];
+        for (let i = 0; i < runCount; i++) {
+            if(pool.length === 0) break;
+            let rIdx = Math.floor(Math.random() * pool.length);
+            cardsData.push(pool.splice(rIdx, 1)[0]);
+        }
+
+        if (currentMode === 'balance') {
+            bombIndexes = [];
+        } else if (currentMode === 'mirror') {
+            let half = Math.floor(cardsData.length / 2);
+            for(let i = 0; i < half; i++) cardsData[cardsData.length - 1 - i] = cardsData[i];
+            let b = Math.floor(Math.random() * half);
+            bombIndexes = [b, cardsData.length - 1 - b];
+            cardsData[b] = 0; cardsData[cardsData.length - 1 - b] = 0;
+        } else if (currentMode === 'rage') {
+            let b1 = Math.floor(Math.random() * cardsData.length);
+            let b2 = Math.floor(Math.random() * cardsData.length);
+            while(b1 === b2) b2 = Math.floor(Math.random() * cardsData.length);
+            bombIndexes = [b1, b2]; cardsData[b1] = 0; cardsData[b2] = 0;
+        } else {
+            let b = Math.floor(Math.random() * cardsData.length);
+            bombIndexes = [b]; cardsData[b] = 0;
+        }
+
+        calculateActualMax();
+        renderCards();
+        renderTalentTags();
+        triggerStartTalents();
+        updatePotentialScore();
+    }
+
+    function calculateActualMax() {
+        let tempMax = -1;
+        cardsData.forEach(num => { if(num > tempMax) tempMax = num; });
+
+        if (currentMode === 'classic') {
+            let bIndex = bombIndexes[0];
+            let rawMaxIndex = cardsData.indexOf(tempMax);
+            if (Math.abs(rawMaxIndex - bIndex) === 1) {
+                killedMaxVals = [tempMax];
+                let secondMax = -1;
+                cardsData.forEach(num => { if(num > secondMax && num !== tempMax) secondMax = num; });
+                actualMaxVal = secondMax;
+            } else {
+                actualMaxVal = tempMax;
+            }
+        } else if (currentMode === 'balance') {
+            let mid = Math.floor(cardsData.length / 2);
+            let leftMax = -1; let rightMax = -1;
+            cardsData.forEach((num, i) => {
+                if(i < mid) { if(num > leftMax) leftMax = num; }
+                else { if(num > rightMax) rightMax = num; }
+            });
+            actualMaxVal = leftMax + rightMax;
+        } else {
+            actualMaxVal = tempMax;
+        }
+    }
+
+    function updatePotentialScore() {
+        let baseWinScore = currentLevel * 10;
+        let cardBonus = Math.max(0, (cardsData.length - flippedCount) * 5);
+        let totalPotential = baseWinScore + cardBonus;
+
+        if(currentMode === 'greed') {
+            let penalty = talents.greedBuster.lv === 0 ? 20 : (talents.greedBuster.lv === 1 ? 10 : 5);
+            totalPotential = Math.max(0, totalPotential - (flippedCount * penalty));
+        }
+        document.getElementById('potentialScore').innerText = totalPotential;
+    }
+
+    function triggerStartTalents() {
+        let modeIntro = {
+            classic: "📋 [经典深渊]：炸弹会吞噬其两侧的最大数字。",
+            rage: "💥 [狂暴红海]：双炸弹潜伏！翻开后两侧卡牌直接气化毁坏。",
+            quantum: "🌌 [量子迷雾]：全员数值随波动剧变！任何已知探测数字均会【失真】！",
+            blind: "⏳ [盲区禁域]：限制翻牌！只能翻开极少明牌，极其依赖雷达或直觉。",
+            balance: "⚖️ [命运天平]：有效最大值 = 左半区最大数 + 右半区最大数。",
+            mirror: "🔄 [镜像双生]：卡牌成对，翻开左侧同步镜像揭示右侧。",
+            greed: "💰 [贪婪诅咒]：超庞大数值，多翻牌会产生沉重的扣分惩罚！",
+            time: "🕒 [混沌时空]：每 3 步全场大乱序洗牌！洗牌将洗刷掉一切已有痕迹！"
+        };
+
+        let msgStr = modeIntro[currentMode];
+        
+        if(talents.balanceScale.lv > 0) {
+            let mid = Math.floor(cardsData.length / 2);
+            let leftSum = 0; let rightSum = 0;
+            cardsData.forEach((num, i) => { if(i < mid) leftSum += num; else rightSum += num; });
+            msgStr += ` [⚖️感应：${leftSum > rightSum ? "左半区" : "右半区"}总和更大]`;
+        }
+
+        if(talents.kingInsider.lv > 0 && currentMode === 'classic') {
+            msgStr += ` [👑王牌：本局原始最高分${killedMaxVals.length > 0 ? '已被摧毁！' : '健在'}]`;
+        }
+
+        if(talents.calculatorMath.lv > 0 && currentMode === 'balance') {
+            let mid = Math.floor(cardsData.length / 2);
+            let leftMax = -1;
+            cardsData.forEach((num, i) => { if(i < mid && num > leftMax) leftMax = num; });
+            baseMapBackup = ` [🧮精算：左半区最高原数值为 ${leftMax}]`;
+            msgStr += baseMapBackup;
+        }
+
+        const msgBox = document.getElementById('gameMsg');
+        msgBox.innerText = msgStr;
+        msgBox.style.color = "#1e293b";
+
+        if(talents.luckyStar.lv > 0) {
+            setTimeout(() => {
+                let targets = [];
+                for(let i=0; i<cardsData.length; i++) if(cardsData[i]!==0) targets.push(i);
+                let count = Math.min(talents.luckyStar.lv, targets.length);
+                for(let k=0; k<count; k++) {
+                    let luckyIdx = targets.splice(Math.floor(Math.random()*targets.length),1)[0];
+                    luckyStarIndexes[luckyIdx] = cardsData[luckyIdx] % 2 === 0 ? "偶" : "奇";
+                }
+                updateCardBackMarkings();
+            }, 200);
+        }
+    }
+
+    function renderCards() {
         const container = document.getElementById('cardsContainer');
         container.innerHTML = '';
-        
         cardsData.forEach((num, index) => {
             const card = document.createElement('div');
             card.className = 'card';
             card.id = `card-${index}`;
-            
             card.onclick = () => { if(!isGameOver) selectCard(index); };
             card.ondblclick = () => { if(!isGameOver) flipCard(index); };
-
             card.innerHTML = `
                 <div class="card-inner">
-                    <div class="card-back">
-                        <span>?</span>
-                        <div class="tip">双击翻开</div>
-                    </div>
-                    <div class="card-front">${num === 0 ? '💣' : num}</div>
-                </div>
-            `;
+                    <div class="card-back"><span id="back-text-${index}">?</span><div class="tip">双击翻开</div></div>
+                    <div class="card-front" id="front-text-${index}">${num === 0 ? '💣' : num}</div>
+                </div>`;
             container.appendChild(card);
         });
-    </div>
+        updateCardBackMarkings();
+    }
+
+    // 统一处理卡牌背部的技能残留提示，防止数值变动误导
+    function updateCardBackMarkings() {
+        cardsData.forEach((_, i) => {
+            const backTxt = document.getElementById(`back-text-${i}`);
+            if(!backTxt) return;
+
+            if(scannedStates[i]) {
+                let state = scannedStates[i];
+                if(state.isStale) {
+                    backTxt.innerText = `👁️*已失真`;
+                    backTxt.style.color = "#ef4444";
+                } else {
+                    backTxt.innerText = `👁️${state.originalValue === 0 ? '💣' : state.originalValue}`;
+                    backTxt.style.color = "#10b981";
+                }
+            } 
+            else if(luckyStarIndexes[i]) {
+                backTxt.innerText = `✨${luckyStarIndexes[i]}`;
+                backTxt.style.color = "#eab308";
+            } 
+            else {
+                backTxt.innerText = "?";
+                backTxt.style.color = "#ffffff";
+            }
+        });
+    }
 
     function flipCard(index) {
         const cardElement = document.getElementById(`card-${index}`);
         if (cardElement.classList.contains('flipped')) return;
 
+        if(currentMode === 'blind') {
+            let allowedFlips = 3 + talents.blindExtender.lv;
+            if(flippedCount >= allowedFlips) {
+                alert("⏳ 处于盲区禁域：翻牌已达上限！无法继续翻牌，请凭借已有情报锁定答案！");
+                return;
+            }
+        }
+
+        if(cardsData[index] === 0 && bombIndexes.includes(index) && talents.bombShield.lv > 0 && Math.random() > 0.5) {
+            alert("🛡️ 触发【排雷免死】：该地雷失效废弃！");
+            cardElement.classList.add('flipped');
+            cardElement.classList.add('is-killed');
+            flippedCount++;
+            document.getElementById('panelFlipped').innerText = flippedCount;
+            updatePotentialScore();
+            return;
+        }
+
         cardElement.classList.add('flipped');
         flippedCount++;
+
+        // 核心纠正1：量子迷雾引发的雷达失效与天平天眼修正机制
+        if (currentMode === 'quantum') {
+            let skipChange = false;
+            if(talents.quantumMuffle.lv === 1 && Math.random() < 0.40) skipChange = true;
+            if(talents.quantumMuffle.lv === 2 && Math.random() < 0.80) skipChange = true;
+
+            if(!skipChange) {
+                const delta = Math.random() > 0.5 ? 1 : -1;
+                
+                // 标志雷达数据全部“失真”
+                for (let idx in scannedStates) {
+                    scannedStates[idx].isStale = true;
+                }
+                // 奇偶反转纠正：由于加减1，所有偶数变奇数，奇数变偶数
+                for (let idx in luckyStarIndexes) {
+                    luckyStarIndexes[idx] = luckyStarIndexes[idx] === "奇" ? "偶" : "奇";
+                }
+
+                cardsData = cardsData.map((num, i) => {
+                    const cElement = document.getElementById(`card-${i}`);
+                    if (num !== 0 && cElement && !cElement.classList.contains('flipped')) {
+                        return Math.max(1, num + delta);
+                    }
+                    return num;
+                });
+
+                cardsData.forEach((num, i) => {
+                    const front = document.getElementById('front-text-' + i);
+                    if(front && num !== 0) front.innerText = num;
+                });
+                calculateActualMax();
+            }
+        }
+        else if (currentMode === 'rage' && cardsData[index] === 0) {
+            [index - 1, index + 1].forEach(adj => {
+                if (adj >= 0 && adj < cardsData.length) {
+                    const adjCard = document.getElementById(`card-${adj}`);
+                    if(adjCard && !adjCard.classList.contains('flipped')) {
+                        adjCard.classList.add('flipped');
+                        adjCard.classList.add('is-killed');
+                    }
+                }
+            });
+        } 
+        else if (currentMode === 'mirror') {
+            let mirrorIdx = cardsData.length - 1 - index;
+            if(mirrorIdx !== index) {
+                const mCard = document.getElementById(`card-${mirrorIdx}`);
+                if(mCard && !mCard.classList.contains('flipped')) {
+                    let costFlip = true;
+                    if(talents.chainChain.lv > 0 && Math.random() > 0.5) costFlip = false;
+                    mCard.classList.add('flipped');
+                    if(costFlip) flippedCount++;
+                }
+            }
+        }
+
+        document.getElementById('panelFlipped').innerText = flippedCount;
+        updateCardBackMarkings(); // 重新洗练背面UI
         updatePotentialScore();
         selectCard(index);
 
-        if (cardsData[index] === 0) {
-            const msgBox = document.getElementById('gameMsg');
-            msgBox.innerText = "🚨 你翻出了炸弹💣！注意提防它左右两侧的数字！";
-            msgBox.style.color = "#ef4444";
+        if (currentMode === 'time') {
+            triggerTimeStep();
         }
     }
 
     function selectCard(index) {
-        if (selectedIndex !== -1) document.getElementById(`card-${selectedIndex}`).classList.remove('selected');
+        if (selectedIndex !== -1) {
+            const prev = document.getElementById(`card-${selectedIndex}`);
+            if(prev) prev.classList.remove('selected');
+        }
         selectedIndex = index;
-        document.getElementById(`card-${index}`).classList.add('selected');
-        
+        const target = document.getElementById(`card-${index}`);
+        if(target) target.classList.add('selected');
         document.getElementById('gambleBtn').disabled = false;
-        const isFlipped = document.getElementById(`card-${index}`).classList.contains('flipped');
-        const msgBox = document.getElementById('gameMsg');
-        
-        if (isFlipped) {
-            const valStr = cardsData[index] === 0 ? "炸弹" : cardsData[index];
-            msgBox.innerText = `已锁定明牌 [ ${valStr} ]。确定它是经过规避后的有效最大值？`;
-            msgBox.style.color = "#2563eb";
-        } else {
-            msgBox.innerText = `⚡ 已锁定未知的暗牌。盲猜暗牌失败将触发【贪婪惩罚】，扣除 3 分最高分！`;
-            msgBox.style.color = "#b45309";
+
+        if (currentMode === 'time') {
+            triggerTimeStep();
         }
     }
 
-    function updatePotentialScore() {
-        const potential = cardsData.length - flippedCount;
-        document.getElementById('potentialScore').innerText = potential;
+    // 核心纠正2：混沌时空引发洗牌，摧毁一切空间标记
+    function triggerTimeStep() {
+        timeModeOpCount++;
+        let triggerLimit = talents.timeStabilizer.lv > 0 ? 5 : 3;
+        if(timeModeOpCount >= triggerLimit) {
+            timeModeOpCount = 0;
+            alert("🕒 警告：时空乱流洗牌！物理方位发生坍塌，以往所有的雷达标记和天眼标记全部失效抹除！");
+            
+            // 清洗技能记录，避免误导
+            scannedStates = {};
+            luckyStarIndexes = {};
+
+            if(talents.calculatorMath.lv > 0 && currentMode === 'balance') {
+                baseMapBackup = ` [🧮精算：(❗数据已因洗牌彻底失效)]`;
+            }
+
+            let unrevealedIndices = [];
+            cardsData.forEach((_, i) => {
+                const card = document.getElementById(`card-${i}`);
+                if(card && !card.classList.contains('flipped')) unrevealedIndices.push(i);
+            });
+
+            let vals = unrevealedIndices.map(i => cardsData[i]);
+            for (let i = vals.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [vals[i], vals[j]] = [vals[j], vals[i]];
+            }
+            unrevealedIndices.forEach((oriIdx, k) => {
+                cardsData[oriIdx] = vals[k];
+                const front = document.getElementById(`front-text-${oriIdx}`);
+                if(front) front.innerText = cardsData[oriIdx] === 0 ? '💣' : cardsData[oriIdx];
+            });
+
+            calculateActualMax();
+
+            if (selectedIndex !== -1) {
+                const prev = document.getElementById(`card-${selectedIndex}`);
+                if(prev) prev.classList.remove('selected');
+                selectedIndex = -1;
+                document.getElementById('gambleBtn').disabled = true;
+            }
+            
+            // 刷新提示词
+            const msgBox = document.getElementById('gameMsg');
+            msgBox.innerText = `🕒 时空重组完毕。` + baseMapBackup;
+            updateCardBackMarkings();
+        }
+    }
+
+    function useSkillScan() {
+        if(isGameOver || scanUsed >= scanTotal) return;
+        const unrevealed = [];
+        cardsData.forEach((_, i) => {
+            const card = document.getElementById(`card-${i}`);
+            if(card && !card.classList.contains('flipped') && !scannedStates[i]) unrevealed.push(i);
+        });
+        if(unrevealed.length === 0) return;
+
+        scanUsed++;
+        document.getElementById('scanUsesLeft').innerText = scanTotal - scanUsed;
+        if(scanUsed >= scanTotal) document.getElementById('skillScanBtn').disabled = true;
+
+        const target = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+        
+        // 标记雷达数据
+        scannedStates[target] = {
+            type: 'radar',
+            originalValue: cardsData[target],
+            isStale: false
+        };
+        
+        updateCardBackMarkings();
+    }
+
+    function useSkillDefuse() {
+        if(isGameOver || defuseUsed >= defuseTotal || selectedIndex === -1) return;
+        const cardElement = document.getElementById(`card-${selectedIndex}`);
+        if(cardElement.classList.contains('flipped')) return;
+
+        defuseUsed++;
+        document.getElementById('defuseUsesLeft').innerText = defuseTotal - defuseUsed;
+        if(defuseUsed >= defuseTotal) document.getElementById('skillDefuseBtn').disabled = true;
+
+        if (cardsData[selectedIndex] === 0) {
+            isGameOver = true;
+            revealAllCards();
+            handleWin("🛡️ 指令排爆专家精准捕获炸弹！危机直接平息。");
+        } else {
+            if(defuseUsed < defuseTotal) {
+                alert(`💥 拆弹失误！该卡并非炸弹。护甲吸收了爆炸，可继续本局。`);
+                cardElement.classList.add('flipped');
+                flippedCount++;
+                document.getElementById('panelFlipped').innerText = flippedCount;
+                updatePotentialScore();
+            } else {
+                isGameOver = true;
+                revealAllCards();
+                handleLose(`💥 拆弹失误！引爆了基地隐藏殉爆。`);
+            }
+        }
+    }
+
+    function useSkillReturn() {
+        if(isGameOver || returnUsed >= returnTotal || selectedIndex === -1) return;
+        const cardElement = document.getElementById(`card-${selectedIndex}`);
+        if(!cardElement.classList.contains('flipped')) return;
+
+        returnUsed++;
+        if(returnUsed >= returnTotal) document.getElementById('skillReturnBtn').disabled = true;
+
+        cardElement.classList.remove('flipped');
+        if(flippedCount > 0) flippedCount--;
+        document.getElementById('panelFlipped').innerText = flippedCount;
+        
+        updatePotentialScore();
+        updateCardBackMarkings();
+    }
+
+    function revealAllCards() {
+        cardsData.forEach((num, index) => {
+            const card = document.getElementById(`card-${index}`);
+            if(!card) return;
+            card.classList.add('flipped');
+            if (num === 0) card.classList.add('is-bomb');
+            
+            if(currentMode === 'balance') {
+                let mid = Math.floor(cardsData.length / 2);
+                let leftMax = -1; let rightMax = -1;
+                cardsData.forEach((n, i) => {
+                    if(i < mid) { if(n > leftMax) leftMax = n; }
+                    else { if(n > rightMax) rightMax = n; }
+                });
+                if(num === leftMax || num === rightMax) card.classList.add('is-max');
+            } else {
+                if (num === actualMaxVal && !card.classList.contains('is-killed')) card.classList.add('is-max');
+            }
+            if (currentMode === 'classic' && killedMaxVals.includes(num)) card.classList.add('is-killed');
+        });
+    }
+
+    function checkIsExecuteWin(val) {
+        if(talents.exactExecute.lv === 0) return val === actualMaxVal;
+        let allowedDiff = talents.exactExecute.lv === 1 ? 2 : 4;
+        return Math.abs(val - actualMaxVal) <= allowedDiff;
     }
 
     function declareMax() {
         if (isGameOver || selectedIndex === -1) return;
         isGameOver = true;
-        document.getElementById('gambleBtn').disabled = true;
-
-        const playerChoiceValue = cardsData[selectedIndex];
-        const isChoiceFlipped = document.getElementById(`card-${selectedIndex}`).classList.contains('flipped');
-
-        // 翻开所有牌进行视觉结算
-        cardsData.forEach((num, index) => {
-            const card = document.getElementById(`card-${index}`);
-            card.classList.add('flipped');
-            if (num === 0) card.classList.add('is-bomb');
-            if (num === actualMaxVal) card.classList.add('is-max');
-            if (actualMaxVal.isKilled && num === actualMaxVal.isKilled) {
-                card.classList.add('is-killed');
-            }
-        });
-
-        const msgElement = document.getElementById('gameMsg');
         
-        // 胜负判定
-        if (playerChoiceValue === actualMaxVal) {
-            const scoreEarned = cardsData.length - flippedCount;
-            msgElement.innerText = `🎉 极致进化！你赢了！真正的有效最大值是 ${actualMaxVal}。`;
-            if(actualMaxVal.isKilled) msgElement.innerText += ` (原最大值 ${actualMaxVal.isKilled} 邻接炸弹已被销毁！ )`;
-            msgElement.innerText += ` 获得：+${scoreEarned} 分。`;
-            msgElement.style.color = "#10b981";
+        document.getElementById('gambleBtn').disabled = true;
+        document.getElementById('skillScanBtn').disabled = true;
+        document.getElementById('skillDefuseBtn').disabled = true;
+        document.getElementById('skillReturnBtn').disabled = true;
 
-            if (scoreEarned > highScore) {
-                highScore = scoreEarned;
-                localStorage.setItem('maxCardHighScoreV4', highScore);
-                document.getElementById('highScore').innerText = highScore;
-            }
+        const choiceValue = cardsData[selectedIndex];
+        const isDestroyed = document.getElementById(`card-${selectedIndex}`).classList.contains('is-killed');
+
+        revealAllCards();
+
+        if (isDestroyed) {
+            handleLose("❌ 大失败！你锁定的卡牌已经在物理爆炸中灰飞烟灭！");
+            return;
+        }
+
+        if (checkIsExecuteWin(choiceValue) && choiceValue !== 0) {
+            let winScore = parseInt(document.getElementById('potentialScore').innerText);
+            accumulatedTotalScore += winScore;
+            handleWin(`🎉 精准锁定！判定通过。本局有效目标值为 [${actualMaxVal}]。斩获 +${winScore} 分！`);
         } else {
-            // 失败惩罚机制
-            msgElement.innerText = `❌ 棋差一着！你选的值是 ${playerChoiceValue === 0 ? '💣': playerChoiceValue}，本局真正的有效最大值是 ${actualMaxVal}。`;
-            msgElement.style.color = "#ef4444";
-
-            if (!isChoiceFlipped) {
-                highScore = Math.max(0, highScore - 3);
-                localStorage.setItem('maxCardHighScoreV4', highScore);
-                document.getElementById('highScore').innerText = highScore;
-                msgElement.innerText += " 【盲猜失败惩罚：历史最高分 -3】";
-            }
+            handleLose(`❌ 决策失败！你押的是 [${choiceValue===0?'💣':choiceValue}]，真正的有效最高目标是 [${actualMaxVal}]。`);
         }
     }
 
-    window.onload = initGame;
+    function handleWin(text) {
+        const msg = document.getElementById('gameMsg');
+        msg.innerText = text; msg.style.color = "#10b981";
+        document.getElementById('totalScoreTxt').innerText = accumulatedTotalScore;
+        
+        document.getElementById('gambleBtn').style.display = "none";
+        document.getElementById('nextLevelBtn').style.display = "block";
+        document.getElementById('nextLevelBtn').innerText = "🌟 进入下一未知维度关卡";
+    }
+
+    function handleLose(text) {
+        const msg = document.getElementById('gameMsg');
+        msg.innerText = text; msg.style.color = "#ef4444";
+
+        if(talents.failInsurance.lv > 0) {
+            talents.failInsurance.lv--;
+            alert(`🛡️ 触发【逆境保险】：消耗1次抵扣层数，积分获得锁定，免除降级！`);
+        } else {
+            currentLevel = 1; 
+            accumulatedTotalScore = 0; 
+        }
+
+        document.getElementById('totalScoreTxt').innerText = accumulatedTotalScore;
+        document.getElementById('gambleBtn').style.display = "none";
+        document.getElementById('nextLevelBtn').style.display = "block";
+        document.getElementById('nextLevelBtn').innerText = "🔴 星域坍塌，重新从第一关缔造";
+    }
+
+    function nextLevelAction() {
+        if(document.getElementById('nextLevelBtn').innerText.includes("重新从第一关")) {
+            initGame();
+            return;
+        }
+        currentLevel++;
+        if(currentLevel > 1 && (currentLevel - 1) % 5 === 0) {
+            triggerRogueUpgrade();
+        } else {
+            initGame();
+        }
+    }
+
+    function triggerRogueUpgrade() {
+        const keys = Object.keys(talents);
+        const availableKeys = keys.filter(k => talents[k].lv < talents[k].maxY);
+        
+        if(availableKeys.length === 0) {
+            initGame();
+            return;
+        }
+
+        const chosenKeys = [];
+        while(chosenKeys.length < Math.min(3, availableKeys.length)) {
+            let rK = availableKeys[Math.floor(Math.random() * availableKeys.length)];
+            if(!chosenKeys.includes(rK)) chosenKeys.push(rK);
+        }
+
+        const box = document.getElementById('rogueChoicesBox');
+        box.innerHTML = '';
+
+        chosenKeys.forEach(k => {
+            const t = talents[k];
+            const nextLv = t.lv + 1;
+            const btn = document.createElement('div');
+            btn.className = 'choice-btn';
+            btn.innerHTML = `<h4>${t.name} (升级至 Lv.${nextLv})</h4><p>契合效果：${t.desc[nextLv-1]}</p>`;
+            btn.onclick = () => {
+                talents[k].lv = nextLv;
+                document.getElementById('rogueOverlay').style.display = "none";
+                initGame();
+            };
+            box.appendChild(btn);
+        });
+
+        document.getElementById('rogueOverlay').style.display = "flex";
+    }
+
+    function renderTalentTags() {
+        const con = document.getElementById('talentTagsContainer');
+        con.innerHTML = '';
+        let hasAny = false;
+        for(let k in talents) {
+            if(talents[k].lv > 0) {
+                hasAny = true;
+                const span = document.createElement('span');
+                span.className = 'talent-tag';
+                span.innerText = `${talents[k].name} Lv.${talents[k].lv}`;
+                con.appendChild(span);
+            }
+        }
+        if(!hasAny) con.innerHTML = '<span style="font-size:0.72rem; color:#94a3b8; font-weight:400;">尚无主动激活的肉鸽科技，请突破第 5 关解锁抽取。</span>';
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        initGame();
+    });
 </script>
 
 </body>
 </html>
-<!--
-在引入了“炸弹邻接销毁”**、**“上限数字迷雾”**以及**“倒扣最高分的盲猜惩罚”**后，这个游戏从一个纯粹的概率计算器，变成了一个高难度的**风险控制与信息核验博弈。
-
-在这种极端硬核的规则下，你的盲目侥幸心理会遭到严厉的惩罚（倒扣3分）。以下是经过数学期望与风险对冲后，为您量身定制的**终极最优硬核策略**：
-
----
-
-## 🚀 核心战略：“三阶段动态核验法”
-
-由于加入了炸弹机制，你无法再仅凭数字大小就直接收手。最完美的博弈流程应该分为三个阶段：
-
-### 阶段一：开局试探与“数字迷雾”测绘（第 1 ~ 2 张）
-
-* **行动**：无脑翻开两张牌。
-* **战略目的**：试探本局的“数字水位线”。因为最高值存在 $\pm15\%$ 的随机浮动，本局上限可能是 85 也可能是 115。
-* **闪电战触发条件**：如果前两张直接开出 **100 以上（如 105）的超高数字**。
-* **判定**：此时它大概率是绝对天花板，且由于它在边缘（或尚未翻出炸弹），它挨着炸弹的概率只有约 $20\%$。
-* **决策**：**直接锁定这张明牌收手！** 搏一把 $80\%$ 的胜率拿 8 分，此时收益期望极高。
-
-
-
-### 阶段二：围绕“炸弹（💣）”的情报战（第 3 ~ 5 张 —— 黄金决策点）
-
-在这几轮中，如果你翻出了**炸弹（💣）**，游戏将进入信息不对称的降维打击状态：
-
-* **情报 A：炸弹已被翻开 💣**
-* 看看炸弹物理位置上**左右相邻**的牌。如果相邻有一张已经是翻开的 96（极大数），**绝对不要选它**！它百分之百被判定为“已炸毁”。此时你应该去寻找远离炸弹的其他较大明牌，或者在剩下暗牌里挑一张远离炸弹的位置进行盲猜。
-* 如果炸弹两边是 5 和 14（很小的数），说明真正的全场最大牌**绝对安全**。此时你可以放心执行常规策略。
-
-
-* **情报 B：翻到第 4 张，炸弹还没出现 ❌💣**
-* 此时如果场上出现了一个 92 左右的较大数字，你将面临巨大的心理战。继续翻牌如果翻出炸弹并在它旁边，92 就会报废。
-* **决策**：如果 92 身边全是暗牌，危险性极高。此时水位线强行下调，只要场上有 88+ 且远离目前翻牌区域的，就可以考虑直接收网断言，落袋为安（拿 6 分或 5 分）。
-
-
-
-### 阶段三：暗牌豪赌的“唯一合法时机”（第 3 ~ 4 张的绝境）
-
-由于盲猜失败会倒扣 3 分最高分，开局乱猜暗牌等同于自杀。在这个版本里，**盲猜暗牌只有一种情况被允许**：
-
-* **触发场景**：你翻开了前 4 张牌，结果全场最大只有 45，而且更走运的是，**炸弹在第 1 张就被你翻出来了**（排除了最大值被炸毁的未知隐患）。
-* **局势分析**：这说明剩下的 6 张暗牌里，**必然 100% 藏着一个没有被炸毁的顶级大牌（如 90+）**。
-* **决策**：此时别再翻第 5 张了（再翻明牌就贬值了）。由于炸弹已明，你直接在远离炸弹的暗牌堆里**盲点一张**发起断言！你此时有 $\frac{1}{6} \approx 16.7\%$ 的概率直接斩获 6 分。如果不幸猜错，说明大牌在其他暗牌里，但这属于**数学上唯一值得用“最高分-3”去对赌的高价值博弈点**。
-
----
-
-## 📊 硬核水位线精算表（明牌拦截流）
-
-如果你决定不冒扣分风险，只断言**明牌**，在防范炸弹的前提下，请严格遵守以下**风险修正后的水位线**：
-
-| 已翻开明牌数 | 剩余牌数 (猜对得分) | 只要场上存在 **$\ge$ 该数字** 的明牌，且确认**未被炸毁**，立刻断言！ |
-| --- | --- | --- |
-| **1 ~ 2 张** | 8 ~ 9 分 | **98 +**（或者任何大于基础范围 100 的数字） |
-| **3 张** | 7 分 | **93 +**（且该牌不与已知的 💣 相邻） |
-| **4 张** | 6 分 | **88 +**（若 💣 仍未出现，此数字安全感最高） |
-| **5 张** | 5 分 | **82 +**（博弈过半，不要再贪，有中等偏上数字立刻交牌） |
-| **6 ~ 7 张** | 3 ~ 4 分 | **75 +**（此时分数贬值，最大值可能也大不到哪去了） |
-| **8 张以上** | 2 分以下 | **无脑全部翻开**，找出那个活下来的最大数字提交。 |
-
-## 🏆 进阶通关口诀
-
-> **开局高数直接秒，翻出炸弹看两边。**
-> **老大挨炸选老二，炸弹没出别太贪。**
-> **明牌全小暗牌肥，炸弹已明可赌天。**
- -->
